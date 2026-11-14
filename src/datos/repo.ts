@@ -7,6 +7,7 @@ import { db } from "./db";
 import { ZONAS, TODAS_POSICIONES } from "./zonas";
 import type { Estadia, EstadoPosicion, Lectura, Posicion, Usuario, Zona } from "./tipos";
 import type { Codigo } from "../dominio/temperatura";
+import { entraEnRonda, ETAPAS, type Etapa } from "../dominio/etapas";
 import { diaOperativo, HORAS_FIJAS, ranuraParaGuardar, ranurasDelDia, VENTANA_MIN_POR_DEFECTO } from "../dominio/tiempo";
 import { normalizar } from "../dominio/iso6346";
 
@@ -101,7 +102,12 @@ export async function vistaPatio(ahora = Date.now()): Promise<VistaPatio> {
     const ultima = ls.length ? ls[ls.length - 1]! : null;
     const anterior = ls.length > 1 ? ls[ls.length - 2]! : null;
     const medidaEnRonda = ls.some((l) => l.dia === ronda.dia && l.indice === ronda.indice);
-    const est: EstadoPosicion = { posicion: p, zona, estadia, ultima, anterior, medidaEnRonda };
+    const etapa = estadia?.etapa ?? null;
+    // D25: solo entran en la ronda y en los contadores las etapas que exigen temperatura
+    const cuentaEnRonda = etapa !== null && entraEnRonda(etapa) && !estadia!.suspendido;
+    const est: EstadoPosicion = {
+      posicion: p, zona, estadia, ultima, anterior, medidaEnRonda, etapa, cuentaEnRonda,
+    };
     lista.push(est);
     porPosicion.set(p.id, est);
   }
@@ -111,8 +117,9 @@ export async function vistaPatio(ahora = Date.now()): Promise<VistaPatio> {
 /* ---------- escritura ---------- */
 
 export async function registrarLlegada(args: {
-  posicionId: string; numero: string; temperaturaC: number;
-  conAdvertencia?: boolean; producto?: string; sello?: string; estado?: string; ahora?: number;
+  posicionId: string; numero: string; temperaturaC?: number;
+  conAdvertencia?: boolean; producto?: string; sello?: string; estado?: string;
+  etapa?: Etapa; ahora?: number;
 }): Promise<{ ok: true; estadiaId: string } | { ok: false; error: string }> {
   const ahora = args.ahora ?? Date.now();
   const numero = normalizar(args.numero);
@@ -126,17 +133,24 @@ export async function registrarLlegada(args: {
   if (ocupada) return { ok: false, error: "Esa posición ya está ocupada." };
 
   const estadiaId = uid();
-  await db.transaction("rw", db.contenedores, db.estadias, db.ubicaciones, db.lecturas, db.eventos, async () => {
-    await db.contenedores.put({ numero, prefijo: numero.slice(0, 4), extra: {} });
-    await db.estadias.add({
-      id: estadiaId, numero, entrada: ahora, salida: null,
-      producto: args.producto ?? "", sello: args.sello ?? "", estado: args.estado ?? "",
-      conAdvertencia: args.conAdvertencia ?? false, suspendido: null, nota: "",
+  // D26: el contenedor llega VACÍO. La temperatura de llegada es opcional.
+  const etapa: Etapa = args.etapa ?? "vacio";
+  await db.transaction("rw",
+    [db.contenedores, db.estadias, db.ubicaciones, db.tramosEtapa, db.lecturas, db.eventos],
+    async () => {
+      await db.contenedores.put({ numero, prefijo: numero.slice(0, 4), extra: {} });
+      await db.estadias.add({
+        id: estadiaId, numero, entrada: ahora, salida: null,
+        producto: args.producto ?? "", sello: args.sello ?? "", estado: args.estado ?? "",
+        conAdvertencia: args.conAdvertencia ?? false, suspendido: null, etapa, nota: "",
+      });
+      await db.ubicaciones.add({ id: uid(), estadiaId, posicionId: args.posicionId, desde: ahora, hasta: null });
+      await db.tramosEtapa.add({ id: uid(), estadiaId, etapa, desde: ahora, hasta: null, usuarioId: USUARIO_DEMO });
+      if (args.temperaturaC !== undefined) {
+        await guardarLecturaInterna(estadiaId, args.posicionId, numero, args.temperaturaC, null, ahora);
+      }
+      await anotar("llegada", { estadiaId, posicionId: args.posicionId, numero, etapa });
     });
-    await db.ubicaciones.add({ id: uid(), estadiaId, posicionId: args.posicionId, desde: ahora, hasta: null });
-    await guardarLecturaInterna(estadiaId, args.posicionId, numero, args.temperaturaC, null, ahora);
-    await anotar("llegada", { estadiaId, posicionId: args.posicionId, numero });
-  });
   return { ok: true, estadiaId };
 }
 
@@ -183,26 +197,109 @@ export async function mover(estadiaId: string, aPosicionId: string, ahora = Date
   return { ok: true as const };
 }
 
+/**
+ * D27: al reportar la salida el contenedor DESAPARECE del patio en vivo de inmediato
+ * (plano, mini-plano, listas, ronda y contadores) y la posición queda libre.
+ * No se borra de nada: sigue en el historial, en la búsqueda y en los reportes.
+ */
 export async function reportarSalida(estadiaId: string, ahora = Date.now()) {
-  await db.transaction("rw", db.estadias, db.ubicaciones, db.eventos, async () => {
-    await db.estadias.update(estadiaId, { salida: ahora });
+  await db.transaction("rw", [db.estadias, db.ubicaciones, db.tramosEtapa, db.eventos], async () => {
+    const antes = await db.estadias.get(estadiaId);
+    await db.estadias.update(estadiaId, { salida: ahora, etapa: "despachado" });
     const actual = await db.ubicaciones.filter((u) => u.estadiaId === estadiaId && u.hasta === null).first();
     if (actual) await db.ubicaciones.update(actual.id, { hasta: ahora });
-    await anotar("salida", { estadiaId });
+    await cerrarYAbrirTramo(estadiaId, "despachado", ahora);
+    await anotar("salida", { estadiaId, etapaAntes: antes?.etapa ?? null, posicion: actual?.posicionId ?? null });
   });
 }
 
-/** Deshacer la salida: vuelve a abrir la estadía en la misma posición. */
+/** Deshacer la salida: vuelve a abrir la estadía en la misma posición y etapa. */
 export async function deshacerSalida(estadiaId: string) {
-  await db.transaction("rw", db.estadias, db.ubicaciones, db.eventos, async () => {
+  await db.transaction("rw", [db.estadias, db.ubicaciones, db.tramosEtapa, db.eventos], async () => {
     const e = await db.estadias.get(estadiaId);
     if (!e || e.salida === null) return;
     const ultimo = (await db.ubicaciones.filter((u) => u.estadiaId === estadiaId).toArray())
       .sort((a, b) => a.desde - b.desde).at(-1);
-    await db.estadias.update(estadiaId, { salida: null });
+    const previos = (await db.tramosEtapa.filter((t) => t.estadiaId === estadiaId).toArray())
+      .sort((a, b) => a.desde - b.desde);
+    const despachado = previos.at(-1);
+    const anterior = previos.at(-2);
+    if (despachado?.etapa === "despachado") await db.tramosEtapa.delete(despachado.id);
+    if (anterior) await db.tramosEtapa.update(anterior.id, { hasta: null });
+    await db.estadias.update(estadiaId, { salida: null, etapa: anterior?.etapa ?? "con_producto" });
     if (ultimo) await db.ubicaciones.update(ultimo.id, { hasta: null });
     await anotar("deshacer-salida", { estadiaId });
   });
+}
+
+/* ---------- etapas del contenedor ---------- */
+
+/** La única cámara de carga del patio. */
+export const CAMARA_CARGA = "E2";
+
+async function cerrarYAbrirTramo(estadiaId: string, etapa: Etapa, ahora: number) {
+  const abierto = await db.tramosEtapa.filter((t) => t.estadiaId === estadiaId && t.hasta === null).first();
+  if (abierto) {
+    if (abierto.etapa === etapa) return;
+    await db.tramosEtapa.update(abierto.id, { hasta: ahora });
+  }
+  await db.tramosEtapa.add({ id: uid(), estadiaId, etapa, desde: ahora, hasta: null, usuarioId: USUARIO_DEMO });
+}
+
+export async function cambiarEtapa(estadiaId: string, etapa: Etapa, ahora = Date.now()) {
+  await db.transaction("rw", [db.estadias, db.tramosEtapa, db.eventos], async () => {
+    const antes = await db.estadias.get(estadiaId);
+    if (!antes || antes.etapa === etapa) return;
+    await db.estadias.update(estadiaId, { etapa });
+    await cerrarYAbrirTramo(estadiaId, etapa, ahora);
+    await anotar("cambio-etapa", { estadiaId, de: antes.etapa, a: etapa });
+  });
+}
+
+/** Pasar a Cámara 3 y 4: mueve el contenedor y lo pone a cargar, en un solo paso. */
+export async function pasarACamara(estadiaId: string, posicionId: string, ahora = Date.now()) {
+  if (!posicionId.startsWith(CAMARA_CARGA + "-")) {
+    return { ok: false as const, error: "Esa posición no es de Cámara 3 y 4." };
+  }
+  const res = await mover(estadiaId, posicionId, ahora);
+  if (!res.ok) return res;
+  await cambiarEtapa(estadiaId, "cargando", ahora);
+  return { ok: true as const };
+}
+
+/**
+ * Sacar de la cámara. Si ya tiene producto, empieza la vigilancia con alertas;
+ * si no, vuelve a enfriando.
+ */
+export async function sacarDeCamara(
+  estadiaId: string, posicionId: string, conProducto: boolean, ahora = Date.now(),
+) {
+  const res = await mover(estadiaId, posicionId, ahora);
+  if (!res.ok) return res;
+  await cambiarEtapa(estadiaId, conProducto ? "con_producto" : "enfriando", ahora);
+  return { ok: true as const };
+}
+
+export async function tramosEtapaDe(estadiaId: string) {
+  const t = await db.tramosEtapa.filter((x) => x.estadiaId === estadiaId).toArray();
+  return t.sort((a, b) => a.desde - b.desde);
+}
+
+/** Cuánto tiempo pasó la estadía en cada etapa. Para el historial y el reporte de tiempo en patio. */
+export async function tiempoPorEtapa(estadiaId: string, ahora = Date.now()): Promise<Record<Etapa, number>> {
+  const t = await tramosEtapaDe(estadiaId);
+  const out = { vacio: 0, enfriando: 0, cargando: 0, con_producto: 0, despachado: 0 } as Record<Etapa, number>;
+  for (const x of t) out[x.etapa] += Math.max(0, (x.hasta ?? ahora) - x.desde);
+  return out;
+}
+
+/** La posición anterior de la estadía, si sigue libre: para «Volver a su posición anterior». */
+export async function posicionAnteriorLibre(estadiaId: string): Promise<string | null> {
+  const us = await ubicacionesDe(estadiaId);
+  const previa = us.at(-2);
+  if (!previa) return null;
+  const ocupada = await db.ubicaciones.filter((u) => u.hasta === null && u.posicionId === previa.posicionId).first();
+  return ocupada ? null : previa.posicionId;
 }
 
 export async function corregirEstadia(estadiaId: string, cambios: Partial<Estadia>) {

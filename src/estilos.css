@@ -8,7 +8,8 @@
   --avi:#8A5600; --avi-sup:#FAEFD9; --avi-bor:#E0BE7C; --avi-pl:#D9922A;
   --ale:#C1262E; --ale-sup:#FBE5E6; --ale-bor:#EFA9AC; --ale-pl:#D6383F;
   --nul:#5A6675; --nul-sup:#E9ECF1; --nul-bor:#C6CDD7; --nul-pl:#8A94A2;
-  --libre-pl:#D4DAE3;
+  --libre-pl:#D4DAE3; --vacio-pl:#97A3B2; --frio-pl:#1E90AE; --carga-pl:#7A5EC4;
+  --frio:#0F6C85; --frio-sup:#E0F2F7; --carga:#5B43A0; --carga-sup:#EEE9FB;
   --sans:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,'Roboto Mono',monospace;
   --cab:48px; --pie:54px; --cua:10px;
@@ -22,7 +23,8 @@
   --avi:#EAB54C; --avi-sup:#33250A; --avi-bor:#7A5C16; --avi-pl:#C68A20;
   --ale:#FF7579; --ale-sup:#3B1416; --ale-bor:#8A2E33; --ale-pl:#D6383F;
   --nul:#8C9AAB; --nul-sup:#17222F; --nul-bor:#2C3C4F; --nul-pl:#5E6C7C;
-  --libre-pl:#22303F;
+  --libre-pl:#22303F; --vacio-pl:#51606F; --frio-pl:#1E90AE; --carga-pl:#7A5EC4;
+  --frio:#5BC6E0; --frio-sup:#0B2B34; --carga:#AF97F0; --carga-sup:#211A3A;
   color-scheme: dark;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -85,6 +87,7 @@ p{margin:0}
 .mini-rej{display:grid;gap:2px}
 .cua{width:var(--cua);height:var(--cua);border-radius:2.5px;background:var(--libre-pl);display:block}
 .cua.correcto{background:var(--ok-pl)} .cua.urgencia{background:var(--avi-pl)}
+.cua.vacio{background:var(--vacio-pl)} .cua.enfriando{background:var(--frio-pl)} .cua.cargando{background:var(--carga-pl)}
 .cua.alerta{background:var(--ale-pl)} .cua.codigo{background:var(--nul-pl)}
 .cua.pendiente{box-shadow:inset 0 0 0 3px var(--sup)}
 .cua.apagado{opacity:.13}
@@ -120,6 +123,8 @@ p{margin:0}
       background:var(--sup);border:1px solid var(--borde);border-left:4px solid var(--libre-pl);border-radius:8px;
       padding:6px 9px;width:100%;min-height:46px}
 .fila.correcto{border-left-color:var(--ok-pl)} .fila.urgencia{border-left-color:var(--avi-pl)}
+.fila.vacio{border-left-color:var(--vacio-pl)} .fila.enfriando{border-left-color:var(--frio-pl)}
+.fila.cargando{border-left-color:var(--carga-pl)}
 .fila.alerta{border-left-color:var(--ale-pl)} .fila.codigo{border-left-color:var(--nul-pl)}
 .fila.libre{border-style:dashed;border-left-style:dashed;background:transparent;min-height:38px}
 .fila.late{outline:2px solid var(--acento);outline-offset:1px;background:var(--acento-sup)}
@@ -134,10 +139,13 @@ p{margin:0}
 .fila.urgencia .f-t,.fila.urgencia .f-est{color:var(--avi)}
 .fila.alerta .f-t,.fila.alerta .f-est{color:var(--ale)}
 .fila.codigo .f-t,.fila.codigo .f-est{color:var(--nul)}
+.fila.vacio .f-t,.fila.vacio .f-est{color:var(--tinta3)}
+.fila.enfriando .f-t,.fila.enfriando .f-est{color:var(--frio)}
+.fila.cargando .f-t,.fila.cargando .f-est{color:var(--carga)}
 .fila.libre .f-id,.fila.libre .f-est{color:var(--tinta3)}
 .marca{display:inline-block;font-size:8.5px;font-weight:700;color:var(--acento-tinta);background:var(--acento-sup);
       border:1px solid var(--acento);border-radius:4px;padding:0 4px;margin-left:5px;letter-spacing:0}
-.vacio{text-align:center;font-size:12.5px;color:var(--tinta3);padding:18px 10px}
+.sin-datos{text-align:center;font-size:12.5px;color:var(--tinta3);padding:18px 10px}
 
 /* ---------- ronda: todo en una pantalla de 360x640, sin deslizar ---------- */
 .ronda{display:flex;flex-direction:column;gap:6px;height:100%;min-height:0}
@@ -234,6 +242,8 @@ p{margin:0}
 /* ---------- detalle ---------- */
 .det-cab{background:var(--sup);border:1px solid var(--borde);border-left:4px solid var(--libre-pl);border-radius:9px;padding:10px}
 .det-cab.correcto{border-left-color:var(--ok-pl)} .det-cab.urgencia{border-left-color:var(--avi-pl)}
+.det-cab.vacio{border-left-color:var(--vacio-pl)} .det-cab.enfriando{border-left-color:var(--frio-pl)}
+.det-cab.cargando{border-left-color:var(--carga-pl)}
 .det-cab.alerta{border-left-color:var(--ale-pl)} .det-cab.codigo{border-left-color:var(--nul-pl)}
 .det-cab .ubi{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--tinta2);font-weight:700}
 .det-cab .pid{font-size:22px;font-weight:700;line-height:1.15;letter-spacing:-.02em}
@@ -246,6 +256,9 @@ p{margin:0}
 .det-cab.urgencia .v,.det-cab.urgencia .e{color:var(--avi)}
 .det-cab.alerta .v,.det-cab.alerta .e{color:var(--ale)}
 .det-cab.codigo .v,.det-cab.codigo .e{color:var(--nul)}
+.det-cab.vacio .v,.det-cab.vacio .e{color:var(--tinta3)}
+.det-cab.enfriando .v,.det-cab.enfriando .e{color:var(--frio)}
+.det-cab.cargando .v,.det-cab.cargando .e{color:var(--carga)}
 .dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}
 .dl dt{color:var(--tinta2);font-weight:600}
 .dl dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
@@ -294,7 +307,7 @@ table.tzt tr:last-child td{border-bottom:0}
 .k-nro{width:22px;text-align:center;font-weight:700;color:var(--tinta2);background:var(--sup2);border-right:1px solid var(--borde)}
 .k-cont{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:-.05em;width:92px}
 .k-t{text-align:right;font-weight:700;width:46px}
-.k-h{text-align:right;color:var(--tinta3);font-size:9px;width:34px}
+.k-h{text-align:right;color:var(--tinta3);font-size:8.5px;width:52px;white-space:nowrap}
 tr.correcto .k-t{color:var(--ok)} tr.urgencia .k-t{color:var(--avi)}
 tr.alerta .k-t{color:var(--ale)} tr.codigo .k-t{color:var(--nul)}
 tr.alerta{background:var(--ale-sup)} tr.urgencia{background:var(--avi-sup)}
@@ -369,3 +382,55 @@ tr.calc td{font-weight:700;background:var(--sup2)}
   .hoja-of{min-width:0}
   @page{size:A4 landscape;margin:8mm}
 }
+
+/* ---------- el contenedor es el protagonista (D29) ---------- */
+.numc{font-family:var(--mono);letter-spacing:-.03em;white-space:nowrap;font-weight:500;color:var(--tinta2)}
+.numc b{font-weight:700;color:var(--tinta)}
+.numc.chico{font-size:11px}
+.numc.normal{font-size:14.5px}
+.numc.grande{font-size:21px;letter-spacing:-.045em}
+.numc.grande b{color:var(--acento-tinta)}
+
+/* fila: número arriba, posición y estado debajo */
+.fila{grid-template-columns:minmax(0,1fr) auto}
+.f-pos{display:block;font-size:10.5px;color:var(--tinta3);font-weight:650;margin-top:2px}
+.f-pos .sep{opacity:.5;margin:0 4px}
+.fila.libre{grid-template-columns:minmax(0,1fr) auto}
+.f-libre{font-size:14px;font-weight:700;color:var(--tinta3)}
+
+/* chip de etapa */
+.etapa{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.04em;border-radius:5px;padding:1px 6px;border:1px solid transparent;white-space:nowrap}
+.etapa.vacio{background:var(--nul-sup);color:var(--tinta3);border-color:var(--nul-bor)}
+.etapa.enfriando{background:var(--frio-sup);color:var(--frio);border-color:var(--frio-pl)}
+.etapa.cargando{background:var(--carga-sup);color:var(--carga);border-color:var(--carga-pl)}
+.etapa.con_producto{background:var(--ok-sup);color:var(--ok);border-color:var(--ok-bor)}
+.etapa.despachado{background:var(--nul-sup);color:var(--nul);border-color:var(--nul-bor)}
+.etapa.grande{font-size:11px;padding:3px 9px}
+
+.listo{background:var(--ok-sup);border:1px solid var(--ok-bor);border-left:4px solid var(--ok);
+  border-radius:8px;padding:8px 11px;font-size:12.5px;color:var(--ok);font-weight:650}
+.falta{background:var(--frio-sup);border:1px solid var(--frio-pl);border-left:4px solid var(--frio-pl);
+  border-radius:8px;padding:8px 11px;font-size:12.5px;color:var(--frio);font-weight:600}
+
+/* acción grande destacada por etapa */
+.btn-etapa{background:var(--frio-pl);color:#fff;border-color:var(--frio-pl)}
+.btn-carga{background:var(--carga-pl);color:#fff;border-color:var(--carga-pl)}
+.btn-listo{box-shadow:0 0 0 3px var(--ok-sup);border-color:var(--ok)}
+
+/* ---------- gráfico de tomas (D30) ---------- */
+.graf{background:var(--sup2);border:1px solid var(--borde);border-radius:8px;padding:6px 4px 2px;margin-top:5px}
+.graf-tit{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tinta2);
+  padding:0 6px 2px;display:flex;justify-content:space-between}
+.graf svg{display:block;width:100%;height:auto}
+.graf .reja{stroke:var(--borde);stroke-width:1}
+.graf .ref18{stroke:var(--ok-pl);stroke-width:1;stroke-dasharray:4 3}
+.graf .ref15{stroke:var(--avi-pl);stroke-width:1;stroke-dasharray:4 3}
+.graf .linea{fill:none;stroke:var(--acento);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.graf .rot{fill:var(--tinta3);font-size:8px;font-family:var(--sans)}
+.graf .val{fill:var(--tinta);font-size:8.5px;font-weight:700;font-family:var(--sans)}
+.graf .refrot{font-size:7.5px;font-family:var(--sans);font-weight:700}
+.graf .pt-correcto{fill:var(--ok-pl)} .graf .pt-urgencia{fill:var(--avi-pl)} .graf .pt-alerta{fill:var(--ale-pl)}
+.graf .pt-hueco{fill:var(--sup);stroke:var(--tinta3);stroke-width:1.5;stroke-dasharray:2 2}
+.graf .pt-cod{fill:var(--nul-pl)}
+.graf .val-correcto{fill:var(--ok)} .graf .val-urgencia{fill:var(--avi)} .graf .val-alerta{fill:var(--ale)}

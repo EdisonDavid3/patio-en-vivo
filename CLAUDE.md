@@ -51,6 +51,15 @@ Documento maestro del plan: `PLAN.md`. Formatos originales en `docs/formatos/`.
 | D22 | **El detalle muestra la fecha junto a la hora de ingreso.** | 14-nov |
 | D23 | **Una lectura guardada desde la ronda pertenece a la ronda abierta**, no a la hora fija más cercana. Una lectura suelta (una llegada) nunca se guarda en una hora fija que todavía no ha llegado. | 14-nov |
 | D24 | **Tipografías del sistema, sin descargas externas.** Nada de Google Fonts: la página abre sin señal desde la primera vez y la carga inicial es mínima. | 14-nov |
+| D25 | **ETAPAS DEL CONTENEDOR** (cambio de modelo). Recorrido real: llega **vacío** → se enciende y se **enfría en el sector** → pasa a **Cámara 3 y 4** a **cargar** → vuelve a un sector **con producto** esperando el envío → **despachado**. Reglas configurables: *vacío* no se mide; *enfriando* y *cargando* se miden **sin alerta**; *con producto* se mide **con las alertas de −18/−15**. Contadores, ronda y alertas **solo cuentan las etapas que exigen temperatura**. **Cámara 3 y 4 (6–11) es la única cámara de carga**; Cámara 1 y 2 (1–5) es una zona normal donde llegan vacíos. | 14-nov |
+| D26 | **La temperatura de llegada es OPCIONAL**: los contenedores llegan vacíos y sin temperatura. La llegada entra en etapa *vacío*. (Deja sin efecto a D14.) | 14-nov |
+| D27 | **Al reportar la salida el contenedor desaparece del patio en vivo de inmediato** —plano, mini-plano, listas, ronda y contadores— y su posición queda libre. **No se borra de nada**: sigue en el historial, en la búsqueda y en los reportes, con su hora de salida. Se mantiene la confirmación y el deshacer. | 14-nov |
+| D28 | **Horas en a. m. / p. m. en toda la página**, igual que el formato oficial. (Cambia la decisión anterior de 24 h.) | 14-nov |
+| D29 | **El contenedor es el protagonista**: en detalle, ronda y listas el número va grande con **los cuatro dígitos del patio resaltados** (MSCU 12**8160** 8). La posición pasa a dato secundario («Sector C · 1»). | 14-nov |
+| D30 | **Gráfico de temperaturas**: línea con un punto por toma y su valor escrito, rayas de referencia en −18 y −15, **separado en Turno día y Turno noche** con las horas en a. m. / p. m. Toma no realizada = punto hueco; código (SE…) = etiqueta. Se llama **«Toma actual»**, no «ranura». | 14-nov |
+| D31 | **Plano de PC**: una zona partida en dos columnas muestra su rango en cada título («SECTOR B (1–10)», «SECTOR B (11–20)»). | 14-nov |
+| D32 | **El color del cuadrito responde «¿hay que preocuparse?»**: solo *con producto* usa verde/amarillo/rojo. *Vacío* gris, *enfriando* turquesa, *cargando* violeta, *libre* gris claro. Así un cuadrito rojo siempre es una alerta de verdad. | 14-nov |
+| D33 | **Las etapas son casi exactamente los códigos del formato oficial**: vacío=**V**, cargando=**C**, con producto=**E**, despachado=**D**. **«Enfriando» no tiene código en la norma** (ver sección «Etapas y el formato oficial»). *SE* no es una etapa: es el motivo de una toma fallida. | 14-nov |
 
 ## Estado
 **Fase 0 construida, probada y subida** (14-nov). 46 pruebas automáticas en verde; sin desbordes ni
@@ -82,6 +91,28 @@ despliegue: `gh api repos/EdisonDavid3/patio-en-vivo/deployments/{id}/statuses`.
 Cuenta los eventos sin enviar. **Sube y no baja, y eso es correcto**: no hay servidor hasta la
 Fase 1. Lo que sí debe refrescarse al instante es el patio y el avance de la ronda.
 
+## Etapas y el formato oficial
+La leyenda del papel es `C = Cargando · D = Despachado · E = En espera · SE = Sin energía · V = Vacío`.
+Cuatro de las cinco etapas **ya son** esos códigos:
+
+| Etapa | Código | ¿Se mide? | ¿Alerta −18/−15? |
+|---|---|---|---|
+| Vacío | **V** | no | no |
+| Enfriando | *(no existe)* | sí | no |
+| Cargando | **C** | sí | no |
+| Con producto, en espera | **E** | sí | **sí** |
+| Despachado | **D** | — | — |
+
+`SE` no es una etapa: es el motivo que se anota **en la celda de una toma** cuando no se pudo medir.
+Una prueba (`src/dominio/etapas.test.ts`) vigila esta correspondencia.
+
+**Pendiente de decidir con Edison** (cambia el reporte oficial):
+1. ¿Qué contenedores salen en la hoja: todos, solo los que se miden, o solo los que ya tienen producto?
+2. ¿Cómo se marca «Enfriando» en la fila ESTADO? Recomendación: **V**, porque físicamente sigue vacío
+   y así la hoja no estrena una letra que la jefa no conoce.
+3. Las lecturas de *enfriando* y *cargando* no deben salir encerradas en rojo: en esas etapas la
+   temperatura es información, no incumplimiento.
+
 ## Entregables
 - `PLAN.md` — plan aprobado.
 - `docs/propuesta-pantallas.html` — propuesta visual, publicada en
@@ -108,6 +139,7 @@ C-1, C-10, C-11, C-2...). Hay una prueba que lo vigila.
 ## Pendiente de Edison
 - [x] ~~Nombre del repositorio~~ → `EdisonDavid3/patio-en-vivo`, creado y con el código subido.
 - [x] ~~Settings → Pages → Source = GitHub Actions~~ → hecho; la página está publicada.
+- [ ] **Decidir qué sale en la hoja oficial y cómo se marca «Enfriando»** (ver «Etapas y el formato oficial»).
 - [ ] Lista real de opciones de **Producto** y de **Estado**.
 - [ ] Nombres de los pateros y quién es supervisor.
 - [ ] Un Android y un iPhone reales para probar (Fase 1).
@@ -181,6 +213,22 @@ Tienen que cuadrar entre pantallas; se calculan en el navegador desde `_datos.js
 52 ocupadas de 115, 7 en alerta, 7 en urgencia, 1 con código SE, 37 de 52 medidas en la ronda de las
 10:00. El reporte diario es el **día operativo cerrado del 13-nov**; las demás pantallas son el 14-nov
 con la ronda de las 10:00 a medio hacer, y eso se dice en la pantalla.
+
+## Trabajo pendiente de la revisión del 14-nov (tras probar la Fase 0)
+Hecho: etapas (D25–D27, D32–D33), horas a. m./p. m. (D28), contenedor protagonista (D29),
+gráfico de línea (D30), títulos del plano de PC (D31), detalle con los botones de etapa.
+**Falta, aprobado pero sin construir:**
+- **Ronda sin efecto túnel**: arriba la lista de la sección con 3 o 4 filas (la anterior ya medida
+  con su valor, la actual resaltada, las siguientes); abajo el teclado fijo. Al guardar **solo baja
+  el resaltado**, la pantalla no cambia ni salta. Tocar cualquier fila lleva a ese contenedor.
+  Debe seguir cabiendo en 360×640 sin deslizar. En PC/tablet el teclado no se estira a todo el
+  ancho: lista a la izquierda y teclado a la derecha, o un ancho máximo centrado.
+- **Registrar llegada de una sola pasada**: un solo campo de 11 caracteres que pase solo de letras
+  a números tras la cuarta letra, en mayúsculas, con el formato visual «MSCU 128160 8»; los botones
+  de prefijo llenan las 4 letras; si cambiar el teclado del teléfono no es fiable, teclado propio en
+  pantalla. Temperatura, Producto, Sello, Estado y Nota **plegados** («+ Añadir temperatura»).
+  La pantalla debe caber en 360×640: posición, número y «Registrar llegada».
+- **Reporte de tiempo en patio**: mostrar el tiempo por etapa (ya se guarda en `tramosEtapa`).
 
 ## Regla de arquitectura
 Las pantallas **nunca** tocan Supabase ni IndexedDB directamente. Todo pasa por **una sola capa de datos**,

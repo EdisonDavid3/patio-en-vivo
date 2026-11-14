@@ -48,9 +48,9 @@ export function Buscar({ vista, zonas, onPosicion }: {
       </div>
 
       <div className="lista">
-        {q.length < 2 && <p className="vacio">Escribe al menos dos caracteres.</p>}
+        {q.length < 2 && <p className="sin-datos">Escribe al menos dos caracteres.</p>}
         {q.length >= 2 && enPatio.length === 0 && salidos.length === 0 && (
-          <p className="vacio">Ningún contenedor coincide con «{q}».</p>
+          <p className="sin-datos">Ningún contenedor coincide con «{q}».</p>
         )}
         {enPatio.map((h) => {
           const e = vista.porPosicion.get(h.posicionId!);

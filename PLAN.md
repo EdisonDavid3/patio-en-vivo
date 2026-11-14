@@ -437,6 +437,70 @@ Al cerrar cada fase te digo exactamente **qué probar y cómo**, paso a paso.
 
 ---
 
+## 11.bis Etapas del contenedor (revisión del 14-nov)
+
+El patio no es «contenedor puesto, contenedor medido». Tiene un recorrido:
+
+```
+  llega VACÍO ─► se enciende y ENFRÍA en el sector ─► CÁMARA 3 Y 4: CARGA
+       │                                                     │
+       ▼                                                     ▼
+  no se mide            se mide, sin alerta          se mide, sin alerta
+                                                             │
+                                   CON PRODUCTO, esperando envío ◄┘
+                                   se mide cada 2 h, CON alertas
+                                             │
+                                             ▼
+                                        DESPACHADO
+```
+
+**Cámara 3 y 4 (posiciones 6 a 11) es la única cámara de carga.** Cámara 1 y 2 (1 a 5) es una zona
+normal: se usa poco y los contenedores que llegan ahí están vacíos.
+
+| Etapa | ¿Se mide? | ¿Alerta −18/−15? | ¿Entra en la ronda? | Código oficial |
+|---|---|---|---|---|
+| Vacío | no | no | no | **V** |
+| Enfriando | sí | no | sí | *(no existe)* |
+| Cargando | sí | no | sí | **C** |
+| Con producto, en espera | sí | **sí** | sí | **E** |
+| Despachado | — | — | — | **D** |
+
+Todo es configurable por el supervisor: vive en `config`, no en el código.
+
+**Consecuencia importante:** los contadores, la ronda y las alertas **solo cuentan los contenedores
+cuya etapa exige temperatura**. Un patio con 52 ocupadas puede tener solo 35 en la ronda.
+Y en el plano **solo un contenedor con producto puede salir en rojo**: en las demás etapas la
+temperatura es información, no alarma. Vacío va en gris, enfriando en turquesa, cargando en violeta.
+
+### Lo que hace el patero, en botones grandes
+| Etapa | Botón |
+|---|---|
+| Vacío | **Empezar a enfriar** — un toque. |
+| Enfriando | **Pasar a cámara 3 y 4** — muestra las 6 posiciones, las ocupadas apagadas; si solo hay una libre, mueve directo. Se resalta cuando el contenedor ya está **listo para cargar**. |
+| Cargando | **Sacar de la cámara** — pregunta *«¿Ya tiene producto?»*. Si sí, empieza la vigilancia con alertas y ofrece **volver a su posición anterior** de un toque si sigue libre. |
+| Con producto | **Reportar la salida**. |
+| Siempre | Mover · Corregir · Historial · Salida. |
+
+Mientras enfría, la app muestra **cuánto le falta** para la temperatura ideal y avisa
+**«Listo para cargar»** al alcanzarla.
+
+### Las etapas y el formato oficial
+Cuatro de las cinco **ya son** los códigos del papel (V, C, E, D). **«Enfriando» es la única que la
+norma no contempla.** Tres cosas por decidir con la jefa antes de tocar el reporte:
+1. ¿Qué contenedores salen en la hoja: todos, solo los que se miden, o solo los que tienen producto?
+2. ¿Cómo se marca «Enfriando» en la fila ESTADO? La recomendación es **V**, porque físicamente sigue
+   vacío y así la hoja no estrena una letra que la jefa no conoce.
+3. Las lecturas de enfriando y cargando **no** deben salir encerradas en rojo: ahí la temperatura es
+   información, no incumplimiento.
+
+### Salida
+Al reportarla, el contenedor **desaparece del patio en vivo de inmediato** y su posición queda libre.
+No se borra de nada: sigue en el historial, en la búsqueda y en los reportes, con su hora de salida.
+Se mantiene la confirmación y el deshacer.
+
+### Tiempos por etapa
+Se guarda cuánto estuvo en cada una (`tramosEtapa`), para el historial y el reporte de tiempo en patio.
+
 ## 12.bis Estado de la Fase 0 (14-nov)
 
 **Construida y probada.** Lo que quedó hecho:

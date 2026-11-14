@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  instante, diaOperativo, asignarLectura, ranurasDelDia, hhmm, duracion, horaFormato, HORAS_FIJAS, ranuraParaGuardar,
+  instante, diaOperativo, asignarLectura, ranurasDelDia, hhmm, duracion, horaFormato, HORAS_FIJAS, ranuraParaGuardar, hhmmAmPm,
 } from "./tiempo";
 
 describe("día operativo", () => {
@@ -122,5 +122,15 @@ describe("ranura donde se guarda una lectura suelta", () => {
     const a = ranuraParaGuardar(instante(2026, 11, 14, 6, 40));
     expect(a.horaFija).toBe(6);
     expect(a.dia).toBe("2026-11-13");
+  });
+});
+
+describe("horas en a. m. / p. m. (D28)", () => {
+  it("escribe las horas como el formato oficial, también los minutos", () => {
+    expect(hhmmAmPm(instante(2026, 11, 14, 10, 42))).toBe("10:42 a. m.");
+    expect(hhmmAmPm(instante(2026, 11, 14, 0, 5))).toBe("12:05 a. m.");
+    expect(hhmmAmPm(instante(2026, 11, 14, 12, 0))).toBe("12:00 p. m.");
+    expect(hhmmAmPm(instante(2026, 11, 14, 13, 7))).toBe("1:07 p. m.");
+    expect(hhmmAmPm(instante(2026, 11, 14, 23, 59))).toBe("11:59 p. m.");
   });
 });

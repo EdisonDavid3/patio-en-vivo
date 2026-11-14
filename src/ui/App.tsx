@@ -10,7 +10,7 @@ import { Detalle } from "./Detalle";
 import { Buscar } from "./Buscar";
 import { Reporte } from "./Reporte";
 import { useAncho, useTema } from "./util";
-import { hhmm } from "../dominio/tiempo";
+import { hhmmAmPm } from "../dominio/tiempo";
 
 type Pantalla = "patio" | "llegada" | "ronda" | "buscar" | "reporte" | "detalle";
 
@@ -49,7 +49,7 @@ export function App() {
   }, [aviso]);
 
   if (!vista || !zonas || !usuario) {
-    return <div className="app"><div className="cuerpo"><p className="vacio">Preparando el patio…</p></div></div>;
+    return <div className="app"><div className="cuerpo"><p className="sin-datos">Preparando el patio…</p></div></div>;
   }
 
   function abrirPosicion(id: string) {
@@ -84,7 +84,7 @@ export function App() {
         )}
         <button type="button" className={"sinc" + (pendientes === 0 ? " limpio" : "")}
           onClick={() => setAviso({ texto: pendientes === 0 ? "Todo enviado" : `${pendientes} registros esperan WiFi` })}>
-          <i />{pendientes === 0 ? "Al día" : `${pendientes} pend.`} · {hhmm(ahora)}
+          <i />{pendientes === 0 ? "Al día" : `${pendientes} pend.`} · {hhmmAmPm(ahora)}
         </button>
         <button type="button" className="sinc" onClick={alternarTema} aria-label="Cambiar a modo claro u oscuro">
           {tema === "claro" ? "☾" : "☀"}
@@ -93,7 +93,7 @@ export function App() {
 
       <main className={"cuerpo" + (cuerpoFijo ? " fijo" : "")}>
         {pantalla === "patio" && (ancho
-          ? <PlanoPC vista={vista} zonas={zonas} onPosicion={abrirPosicion} actualizado={hhmm(ahora)} />
+          ? <PlanoPC vista={vista} zonas={zonas} onPosicion={abrirPosicion} actualizado={hhmmAmPm(ahora)} />
           : <Patio vista={vista} zonas={zonas} onPosicion={abrirPosicion} destacada={destacada} />)}
 
         {pantalla === "llegada" && (

@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
-import type { Zona, Posicion, Contenedor, Estadia, Ubicacion, Lectura, Usuario, Evento, Ajuste } from "./tipos";
+import type { Zona, Posicion, Contenedor, Estadia, Ubicacion, Lectura, Usuario, Evento, Ajuste, TramoEtapa } from "./tipos";
 
 export class BaseLocal extends Dexie {
   zonas!: EntityTable<Zona, "id">;
@@ -7,6 +7,7 @@ export class BaseLocal extends Dexie {
   contenedores!: EntityTable<Contenedor, "numero">;
   estadias!: EntityTable<Estadia, "id">;
   ubicaciones!: EntityTable<Ubicacion, "id">;
+  tramosEtapa!: EntityTable<TramoEtapa, "id">;
   lecturas!: EntityTable<Lectura, "id">;
   usuarios!: EntityTable<Usuario, "id">;
   eventos!: EntityTable<Evento, "id">;
@@ -24,6 +25,14 @@ export class BaseLocal extends Dexie {
       usuarios: "id",
       eventos: "id, creadoMs, enviadoMs",
       ajustes: "clave",
+    });
+    // v2: etapas del contenedor (vacío → enfriando → cargando → con producto → despachado)
+    this.version(2).stores({
+      tramosEtapa: "id, estadiaId, etapa, desde, hasta",
+    }).upgrade(async (tx) => {
+      await tx.table("estadias").toCollection().modify((e: Estadia) => {
+        if (!e.etapa) e.etapa = "con_producto";
+      });
     });
   }
 }

@@ -4,8 +4,9 @@ import type { VistaPatio } from "../datos/repo";
 import { recordarSeccion } from "../datos/repo";
 import { MiniPlano } from "./MiniPlano";
 import { claseDe, ETIQUETA_CLASE, ICONO_CLASE, valorDe } from "./util";
-import { formatear } from "../dominio/iso6346";
-import { hhmm } from "../dominio/tiempo";
+import { Numero } from "./comp/Numero";
+import { hhmmAmPm } from "../dominio/tiempo";
+import { ETAPAS } from "../dominio/etapas";
 
 type Filtro = { alertas: boolean; pendientes: boolean };
 
@@ -14,7 +15,7 @@ function pasa(e: EstadoPosicion, f: Filtro): boolean {
     const c = claseDe(e);
     if (c !== "alerta" && c !== "urgencia") return false;
   }
-  if (f.pendientes && !(e.estadia && !e.medidaEnRonda)) return false;
+  if (f.pendientes && !(e.cuentaEnRonda && !e.medidaEnRonda)) return false;
   return true;
 }
 
@@ -24,12 +25,12 @@ export function Fila({ e, destacada, onClick }: { e: EstadoPosicion; destacada?:
   if (!e.estadia) {
     return (
       <button type="button" className="fila libre" onClick={onClick} data-pos={e.posicion.id}>
-        <span className="f-id">{id}</span>
-        <span><span className="f-est">Libre</span></span>
+        <span><span className="f-libre">{id}</span><span className="f-pos">Libre</span></span>
         <span className="f-der" />
       </button>
     );
   }
+  const etapa = e.estadia.etapa;
   return (
     <button
       type="button"
@@ -37,18 +38,18 @@ export function Fila({ e, destacada, onClick }: { e: EstadoPosicion; destacada?:
       onClick={onClick}
       data-pos={e.posicion.id}
     >
-      <span className="f-id">{id}</span>
       <span>
-        <span className="f-num">{formatear(e.estadia.numero)}</span>
-        <span className="f-est">
-          {ICONO_CLASE[cl]} {ETIQUETA_CLASE[cl]}
-          {!e.medidaEnRonda && <span className="marca">SIN TOMAR</span>}
+        <Numero numero={e.estadia.numero} />
+        <span className="f-pos">
+          {id}<span className="sep">·</span>
+          <span className={"etapa " + etapa}>{ETAPAS[etapa].corto}</span>
+          {e.cuentaEnRonda && !e.medidaEnRonda && <span className="marca">SIN TOMAR</span>}
           {e.estadia.conAdvertencia && <span className="marca" style={{ color: "var(--ale)", borderColor: "var(--ale)", background: "var(--ale-sup)" }}>REVISAR Nº</span>}
         </span>
       </span>
       <span className="f-der">
         <span className="f-t">{valorDe(e)}</span>
-        <span className="f-h">{e.ultima ? hhmm(e.ultima.tomadaMs) : ""}</span>
+        <span className="f-h">{e.ultima ? hhmmAmPm(e.ultima.tomadaMs) : ""}</span>
       </span>
     </button>
   );
@@ -68,6 +69,7 @@ export function Patio({ vista, zonas, onPosicion, destacada }: {
     for (const e of vista.lista) {
       if (!e.estadia) continue;
       oc++;
+      // solo las etapas vigiladas pueden estar en urgencia o alerta
       const c = claseDe(e);
       if (c === "urgencia") urg++;
       else if (c === "alerta") ale++;
@@ -99,7 +101,7 @@ export function Patio({ vista, zonas, onPosicion, destacada }: {
       {compacto ? (
         <div className="tira">
           {zonas.map((z) => {
-            const n = vista.lista.filter((e) => e.posicion.zonaId === z.id && e.estadia && !e.medidaEnRonda).length;
+            const n = vista.lista.filter((e) => e.posicion.zonaId === z.id && e.cuentaEnRonda && !e.medidaEnRonda).length;
             return (
               <button key={z.id} type="button" className={z.id === activa ? "aqui" : ""}
                 onClick={() => { setActiva(z.id); void recordarSeccion(z.id); }}>
@@ -157,7 +159,7 @@ export function Patio({ vista, zonas, onPosicion, destacada }: {
         }}
       >
         {visibles.length === 0
-          ? <p className="vacio">Nada que mostrar en {zona.nombre} con este filtro.</p>
+          ? <p className="sin-datos">Nada que mostrar en {zona.nombre} con este filtro.</p>
           : visibles.map((e) => (
               <Fila key={e.posicion.id} e={e} destacada={destacada === e.posicion.id}
                 onClick={() => onPosicion(e.posicion.id)} />

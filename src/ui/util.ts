@@ -1,32 +1,52 @@
 import { useEffect, useState } from "react";
 import type { EstadoPosicion } from "../datos/tipos";
 import { rango, formatearC, type Rango } from "../dominio/temperatura";
+import { ETAPAS } from "../dominio/etapas";
 
-export type Clase = "libre" | "codigo" | Rango;
+/**
+ * El color dice «¿hay que preocuparse?».
+ * Solo un contenedor con producto puede salir en rojo: en las demás etapas
+ * la temperatura es información, no alarma.
+ */
+export type Clase = "libre" | "vacio" | "enfriando" | "cargando" | "codigo" | Rango;
 
 export function claseDe(e: EstadoPosicion): Clase {
   if (!e.estadia) return "libre";
+  if (e.etapa === "vacio") return "vacio";
   if (e.estadia.suspendido) return "codigo";
+  if (e.etapa === "enfriando") return "enfriando";
+  if (e.etapa === "cargando") return "cargando";
   const l = e.ultima;
-  if (!l) return "codigo";
-  if (l.c === null) return "codigo";
+  if (!l || l.c === null) return "codigo";
   return rango(l.c);
 }
 
 export const ETIQUETA_CLASE: Record<Clase, string> = {
-  libre: "Libre", correcto: "Correcto", urgencia: "Urgencia", alerta: "Alerta", codigo: "Sin lectura",
+  libre: "Libre", vacio: ETAPAS.vacio.nombre, enfriando: ETAPAS.enfriando.nombre,
+  cargando: ETAPAS.cargando.nombre, correcto: "Correcto", urgencia: "Urgencia",
+  alerta: "Alerta", codigo: "Sin lectura",
 };
 export const ICONO_CLASE: Record<Clase, string> = {
-  libre: "", correcto: "✓", urgencia: "!", alerta: "▲", codigo: "•",
+  libre: "", vacio: "○", enfriando: "❄", cargando: "⇩", correcto: "✓", urgencia: "!", alerta: "▲", codigo: "•",
 };
 
 export function valorDe(e: EstadoPosicion): string {
   if (!e.estadia) return "";
+  if (e.etapa === "vacio") return "—";
   if (e.estadia.suspendido) return e.estadia.suspendido;
   const l = e.ultima;
   if (!l) return "—";
   if (l.c === null) return l.codigo ?? "—";
   return formatearC(l.c) + " °C";
+}
+
+/**
+ * El número partido para resaltar los cuatro dígitos con los que lo nombran
+ * en el patio: MSCU 12 **8160** 8 → «el ocho uno sesenta».
+ */
+export function partesNumero(numero: string): { antes: string; clave: string; despues: string } {
+  if (numero.length !== 11) return { antes: numero, clave: "", despues: "" };
+  return { antes: numero.slice(0, 4) + " " + numero.slice(4, 6), clave: numero.slice(6, 10), despues: " " + numero.slice(10) };
 }
 
 export function useAncho(min = 1024): boolean {

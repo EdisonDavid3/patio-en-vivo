@@ -40,7 +40,7 @@ export function MiniPlano({ zonas, lista, activa, modo = "patio", destacada, apa
               <div className="mini-rej" style={{ gridTemplateColumns: `repeat(${z.colsTel}, var(--cua))` }}>
                 {(porZona.get(z.id) ?? []).map((e) => {
                   const cl = claseDe(e);
-                  const pend = modo === "ronda" && e.estadia && !e.medidaEnRonda;
+                  const pend = modo === "ronda" && e.cuentaEnRonda && !e.medidaEnRonda;
                   return (
                     <i
                       key={e.posicion.id}

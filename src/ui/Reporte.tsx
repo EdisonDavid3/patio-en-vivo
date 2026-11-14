@@ -23,7 +23,7 @@ export function Reporte() {
     void armarReporte(dia).then((r) => { setRep(r); setHoja(0); });
   }, [dia]);
 
-  if (!rep) return <p className="vacio">Cargando el reporte…</p>;
+  if (!rep) return <p className="sin-datos">Cargando el reporte…</p>;
 
   const hojas = Math.max(1, Math.ceil(rep.filas.length / POR_HOJA));
   const filas = rep.filas.slice(hoja * POR_HOJA, (hoja + 1) * POR_HOJA);

@@ -3,12 +3,12 @@ import type { EstadoPosicion, Zona } from "../datos/tipos";
 import type { VistaPatio } from "../datos/repo";
 import { COLS_PC, GRUPOS } from "../datos/zonas";
 import { claseDe, valorDe } from "./util";
-import { hhmm } from "../dominio/tiempo";
+import { hhmmAmPm } from "../dominio/tiempo";
 
 type Filtro = { alertas: boolean; pendientes: boolean };
 function pasa(e: EstadoPosicion, f: Filtro) {
   if (f.alertas) { const c = claseDe(e); if (c !== "alerta" && c !== "urgencia") return false; }
-  if (f.pendientes && !(e.estadia && !e.medidaEnRonda)) return false;
+  if (f.pendientes && !(e.cuentaEnRonda && !e.medidaEnRonda)) return false;
   return true;
 }
 
@@ -22,8 +22,10 @@ function Tabla({ zona, filas, filtro, onPosicion }: {
     <div className="pc-fila-z">
       {trozos.map((trozo, i) => (
         <div className="tz" key={i}>
-          {i === 0 && <div className="tz-cab">{zona.cap}</div>}
-          {i > 0 && <div className="tz-cab">&nbsp;</div>}
+          <div className="tz-cab">
+            {zona.cap}
+            {cols > 1 && ` (${trozo[0]?.posicion.numero}–${trozo.at(-1)?.posicion.numero})`}
+          </div>
           <table className="tzt">
             <thead>
               <tr>
@@ -44,10 +46,10 @@ function Tabla({ zona, filas, filtro, onPosicion }: {
                     <td className="k-nro">{e.posicion.numero}</td>
                     <td className="k-cont">
                       {e.estadia ? e.estadia.numero : "libre"}
-                      {e.estadia && !e.medidaEnRonda && <span className="k-sin"> SIN TOMAR</span>}
+                      {e.cuentaEnRonda && !e.medidaEnRonda && <span className="k-sin"> SIN TOMAR</span>}
                     </td>
                     <td className="k-t">{e.estadia ? valorDe(e).replace(" °C", "") : "—"}</td>
-                    <td className="k-h">{e.ultima ? hhmm(e.ultima.tomadaMs) : ""}</td>
+                    <td className="k-h">{e.ultima ? hhmmAmPm(e.ultima.tomadaMs) : ""}</td>
                   </tr>
                 );
               })}
@@ -99,7 +101,7 @@ export function PlanoPC({ vista, zonas, onPosicion, actualizado }: {
     oc++;
     const c = claseDe(e);
     if (c === "urgencia") urg++; else if (c === "alerta") ale++;
-    if (!e.medidaEnRonda) sin++;
+    if (e.cuentaEnRonda && !e.medidaEnRonda) sin++;
   }
 
   const hoja = (

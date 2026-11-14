@@ -145,3 +145,11 @@ export function ranuraParaGuardar(ms: number, ventanaMin = VENTANA_MIN_POR_DEFEC
   }
   return a;
 }
+
+/** Hora de pantalla en el mismo formato que el papel: "10:42 a. m." (D28). */
+export function hhmmAmPm(ms: number): string {
+  const p = partes(ms);
+  const sufijo = p.hora < 12 ? "a. m." : "p. m.";
+  const h = p.hora % 12 === 0 ? 12 : p.hora % 12;
+  return `${h}:${dosDigitos(p.minuto)} ${sufijo}`;
+}

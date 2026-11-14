@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
 import { db } from "./db";
 import { sembrar } from "./semilla";
-import { registrarLlegada, mover, reportarSalida, deshacerSalida, vistaPatio, buscar, rondaActual, lecturasDe, ubicacionesDe, guardarLecturaDeRonda } from "./repo";
+import { registrarLlegada, mover, reportarSalida, deshacerSalida, vistaPatio, buscar, rondaActual, lecturasDe, ubicacionesDe, guardarLecturaDeRonda, cambiarEtapa, pasarACamara, sacarDeCamara,
+  tiempoPorEtapa, armarReporte, CAMARA_CARGA } from "./repo";
 import { instante, duracion } from "../dominio/tiempo";
 import { resumen, type Celda } from "../dominio/calculos";
 
@@ -21,15 +22,38 @@ describe("semilla de demostración", () => {
     expect(ocupadas).toHaveLength(52);
     expect(v.ronda.horaFija).toBe(10);
     expect(v.ronda.dia).toBe("2026-11-14");
-    expect(ocupadas.filter((x) => !x.medidaEnRonda)).toHaveLength(15);
+    // D25: a la ronda solo entran las etapas que exigen temperatura
+    const enRonda = ocupadas.filter((x) => x.cuentaEnRonda);
+    expect(enRonda.filter((x) => !x.medidaEnRonda)).toHaveLength(12);
+    expect(enRonda.length).toBeLessThan(ocupadas.length);
+  });
+
+  it("los vacíos no se miden ni cuentan como «sin tomar»", async () => {
+    await sembrar(AHORA);
+    const v = await vistaPatio(AHORA);
+    const vacios = v.lista.filter((x) => x.etapa === "vacio");
+    expect(vacios.length).toBeGreaterThan(0);
+    expect(vacios.every((x) => !x.cuentaEnRonda)).toBe(true);
+    expect(vacios.every((x) => x.ultima === null)).toBe(true);
+  });
+
+  it("los que están cargando están en Cámara 3 y 4, la única cámara de carga", async () => {
+    await sembrar(AHORA);
+    const v = await vistaPatio(AHORA);
+    const cargando = v.lista.filter((x) => x.etapa === "cargando");
+    expect(cargando.length).toBeGreaterThan(0);
+    expect(cargando.every((x) => x.posicion.zonaId === "E2")).toBe(true);
+    // Cámara 1 y 2 no es de carga: ahí llegan vacíos
+    expect(v.lista.filter((x) => x.posicion.zonaId === "E1" && x.estadia)
+            .every((x) => x.etapa === "vacio")).toBe(true);
   });
 
   it("todas las posiciones tienen lectura anterior para comparar en la ronda", async () => {
     await sembrar(AHORA);
     const v = await vistaPatio(AHORA);
-    const ocupadas = v.lista.filter((x) => x.estadia);
-    expect(ocupadas.every((x) => x.ultima !== null)).toBe(true);
-    expect(ocupadas.filter((x) => x.anterior !== null).length).toBeGreaterThan(45);
+    const medidas = v.lista.filter((x) => x.estadia && x.cuentaEnRonda);
+    expect(medidas.every((x) => x.ultima !== null)).toBe(true);
+    expect(medidas.filter((x) => x.anterior !== null).length).toBeGreaterThan(30);
   });
 });
 
@@ -131,7 +155,7 @@ describe("ronda en curso", () => {
 describe("el reporte del día cierra bien", () => {
   it("mínimo, máximo y promedio del día operativo anterior salen de sus lecturas", async () => {
     await sembrar(AHORA);
-    const estadia = (await db.estadias.filter((e) => e.salida === null).first())!;
+    const estadia = (await db.estadias.filter((e) => e.salida === null && e.etapa === "con_producto").first())!;
     const ls = (await lecturasDe(estadia.id)).filter((l) => l.dia === "2026-11-13");
     expect(ls.length).toBeGreaterThan(5);
     const celdas: Celda[] = ls.map((l) => (l.c !== null ? { c: l.c } : l.codigo ? { codigo: l.codigo } : null));
@@ -149,8 +173,8 @@ describe("guardar durante la ronda", () => {
     await sembrar(tarde);
     const antes = await vistaPatio(tarde);
     expect(antes.ronda.horaFija).toBe(2);
-    const pendiente = antes.lista.find((x) => x.estadia && !x.medidaEnRonda)!;
-    const hechasAntes = antes.lista.filter((x) => x.estadia && x.medidaEnRonda).length;
+    const pendiente = antes.lista.find((x) => x.cuentaEnRonda && !x.medidaEnRonda)!;
+    const hechasAntes = antes.lista.filter((x) => x.cuentaEnRonda && x.medidaEnRonda).length;
 
     await guardarLecturaDeRonda({
       estadiaId: pendiente.estadia!.id,
@@ -162,7 +186,7 @@ describe("guardar durante la ronda", () => {
 
     const despues = await vistaPatio(tarde);
     expect(despues.porPosicion.get(pendiente.posicion.id)!.medidaEnRonda).toBe(true);
-    expect(despues.lista.filter((x) => x.estadia && x.medidaEnRonda)).toHaveLength(hechasAntes + 1);
+    expect(despues.lista.filter((x) => x.cuentaEnRonda && x.medidaEnRonda)).toHaveLength(hechasAntes + 1);
     const ls = await lecturasDe(pendiente.estadia!.id);
     const nueva = ls.at(-1)!;
     expect(nueva.horaFija).toBe(2);
@@ -172,7 +196,7 @@ describe("guardar durante la ronda", () => {
   it("volver atrás y guardar de nuevo corrige la celda, no la duplica", async () => {
     await sembrar(AHORA);
     const v = await vistaPatio(AHORA);
-    const p = v.lista.find((x) => x.estadia && !x.medidaEnRonda)!;
+    const p = v.lista.find((x) => x.cuentaEnRonda && !x.medidaEnRonda)!;
     const args = { estadiaId: p.estadia!.id, posicionId: p.posicion.id, numero: p.estadia!.numero, ahora: AHORA };
     await guardarLecturaDeRonda({ ...args, temperaturaC: -18 });
     const n1 = (await lecturasDe(p.estadia!.id)).length;
@@ -196,5 +220,116 @@ describe("orden de las posiciones", () => {
     // E2 conserva su numeración del papel: 6 a 11
     const e2 = v.lista.filter((x) => x.posicion.zonaId === "E2").map((x) => x.posicion.numero);
     expect(e2).toEqual([6, 7, 8, 9, 10, 11]);
+  });
+});
+
+describe("etapas del contenedor", () => {
+  it("el recorrido completo: vacío → enfriando → cámara → con producto → salida", async () => {
+    await sembrar(AHORA);
+    const v = await vistaPatio(AHORA);
+    const vacio = v.lista.find((x) => x.etapa === "vacio")!;
+    const id = vacio.estadia!.id;
+
+    await cambiarEtapa(id, "enfriando", AHORA);
+    let v2 = await vistaPatio(AHORA);
+    expect(v2.porPosicion.get(vacio.posicion.id)!.etapa).toBe("enfriando");
+    expect(v2.porPosicion.get(vacio.posicion.id)!.cuentaEnRonda).toBe(true);
+
+    // pasar a Cámara 3 y 4: mueve y pone a cargar de un solo paso
+    const libreCamara = v2.lista.find((x) => x.posicion.zonaId === CAMARA_CARGA && !x.estadia);
+    if (libreCamara) {
+      expect((await pasarACamara(id, libreCamara.posicion.id, AHORA)).ok).toBe(true);
+      v2 = await vistaPatio(AHORA);
+      expect(v2.porPosicion.get(libreCamara.posicion.id)!.etapa).toBe("cargando");
+      expect(v2.porPosicion.get(vacio.posicion.id)!.estadia).toBeNull();
+
+      // sacarlo con producto arranca la vigilancia con alertas
+      await sacarDeCamara(id, vacio.posicion.id, true, AHORA);
+      v2 = await vistaPatio(AHORA);
+      expect(v2.porPosicion.get(vacio.posicion.id)!.etapa).toBe("con_producto");
+    }
+
+    const tiempos = await tiempoPorEtapa(id, AHORA);
+    expect(tiempos.vacio).toBeGreaterThan(0);
+    expect(Object.values(tiempos).every((x) => x >= 0)).toBe(true);
+  });
+
+  it("no deja pasar a cámara una posición que no sea de Cámara 3 y 4", async () => {
+    await sembrar(AHORA);
+    const v = await vistaPatio(AHORA);
+    const e = v.lista.find((x) => x.etapa === "enfriando" || x.etapa === "vacio")!;
+    const fuera = v.lista.find((x) => x.posicion.zonaId === "C" && !x.estadia)!;
+    const res = await pasarACamara(e.estadia!.id, fuera.posicion.id, AHORA);
+    expect(res.ok).toBe(false);
+  });
+
+  it("al reportar la salida desaparece del patio pero no de los registros", async () => {
+    await sembrar(AHORA);
+    const v = await vistaPatio(AHORA);
+    const o = v.lista.find((x) => x.etapa === "con_producto")!;
+    const { id, numero } = o.estadia!;
+
+    await reportarSalida(id, AHORA);
+    const v2 = await vistaPatio(AHORA);
+    // fuera del plano, de las listas y de los contadores
+    expect(v2.porPosicion.get(o.posicion.id)!.estadia).toBeNull();
+    expect(v2.lista.some((x) => x.estadia?.id === id)).toBe(false);
+    // pero sigue en el historial y en la búsqueda
+    const hits = await buscar(numero.slice(-5));
+    const hallado = hits.find((h) => h.estadia.id === id)!;
+    expect(hallado.enPatio).toBe(false);
+    expect(hallado.estadia.salida).toBe(AHORA);
+    expect(hallado.estadia.etapa).toBe("despachado");
+    // y en el reporte del día
+    const rep = await armarReporte("2026-11-14");
+    expect(rep.filas.some((f) => f.numero === numero)).toBe(true);
+
+    // deshacer lo devuelve a su posición y a su etapa
+    await deshacerSalida(id);
+    const v3 = await vistaPatio(AHORA);
+    expect(v3.porPosicion.get(o.posicion.id)!.estadia?.id).toBe(id);
+    expect(v3.porPosicion.get(o.posicion.id)!.etapa).toBe("con_producto");
+  });
+
+  it("una llegada entra como vacía y sin temperatura", async () => {
+    await sembrar(AHORA);
+    const v = await vistaPatio(AHORA);
+    const libre = v.lista.find((x) => !x.estadia)!;
+    const res = await registrarLlegada({
+      posicionId: libre.posicion.id, numero: "MSCU1281608", ahora: AHORA,
+    });
+    expect(res.ok).toBe(true);
+    const v2 = await vistaPatio(AHORA);
+    const e = v2.porPosicion.get(libre.posicion.id)!;
+    expect(e.etapa).toBe("vacio");
+    expect(e.ultima).toBeNull();
+    expect(e.cuentaEnRonda).toBe(false);
+  });
+});
+
+describe("datos de demostración coherentes", () => {
+  it("un contenedor enfriando viene bajando desde caliente, nunca a −40", async () => {
+    await sembrar(AHORA);
+    const v = await vistaPatio(AHORA);
+    const enfriando = v.lista.filter((x) => x.etapa === "enfriando");
+    expect(enfriando.length).toBeGreaterThan(0);
+    for (const x of enfriando) {
+      const ls = (await lecturasDe(x.estadia!.id)).filter((l) => l.c !== null);
+      expect(ls.length).toBeGreaterThan(0);
+      for (const l of ls) {
+        expect(l.c!).toBeLessThan(22);
+        expect(l.c!).toBeGreaterThan(-24);
+      }
+      // la serie baja: la primera es más caliente que la última
+      if (ls.length > 2) expect(ls[0]!.c!).toBeGreaterThan(ls.at(-1)!.c!);
+    }
+  });
+
+  it("queda cupo libre en la cámara de carga", async () => {
+    await sembrar(AHORA);
+    const v = await vistaPatio(AHORA);
+    const camara = v.lista.filter((x) => x.posicion.zonaId === CAMARA_CARGA);
+    expect(camara).toHaveLength(6);
+    expect(camara.filter((x) => !x.estadia).length).toBeGreaterThan(0);
   });
 });

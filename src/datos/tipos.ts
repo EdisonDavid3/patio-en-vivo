@@ -1,4 +1,5 @@
 import type { Codigo } from "../dominio/temperatura";
+import type { Etapa } from "../dominio/etapas";
 
 export type Rol = "patero" | "supervisor";
 
@@ -30,7 +31,19 @@ export type Estadia = {
   conAdvertencia: boolean;
   /** D3: el supervisor lo marcó sin energía o vacío; deja de pedirle temperatura. */
   suspendido: Codigo | null;
+  /** D25: en qué etapa del recorrido está. Decide si se mide y si aplican alertas. */
+  etapa: Etapa;
   nota: string;
+};
+
+/** Cuánto tiempo estuvo la estadía en cada etapa. Alimenta el reporte de tiempo en patio. */
+export type TramoEtapa = {
+  id: string;
+  estadiaId: string;
+  etapa: Etapa;
+  desde: number;
+  hasta: number | null;
+  usuarioId: string;
 };
 
 export type Ubicacion = { id: string; estadiaId: string; posicionId: string; desde: number; hasta: number | null };
@@ -81,4 +94,8 @@ export type EstadoPosicion = {
   ultima: Lectura | null;
   anterior: Lectura | null;
   medidaEnRonda: boolean;
+  /** Etapa de la estadía que ocupa la posición, o null si está libre. */
+  etapa: Etapa | null;
+  /** ¿Esta posición entra en la ronda y cuenta como «sin tomar»? */
+  cuentaEnRonda: boolean;
 };

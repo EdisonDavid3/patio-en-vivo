@@ -7,7 +7,8 @@ import { ZONAS, TODAS_POSICIONES } from "./zonas";
 import { digitoVerificador } from "../dominio/iso6346";
 import { diaOperativo, ranurasDelDia, HORAS_FIJAS } from "../dominio/tiempo";
 import { rondaActual, USUARIO_DEMO } from "./repo";
-import type { Estadia, Lectura, Ubicacion } from "./tipos";
+import type { Estadia, Lectura, TramoEtapa, Ubicacion } from "./tipos";
+import { exigeTemperatura, IDEAL_PARA_CARGAR, type Etapa } from "../dominio/etapas";
 
 const PREFIJOS = ["MSCU","TGHU","CMAU","MSKU","TRLU","HLXU","SUDU","CAIU","GESU","MRKU",
                   "TCLU","SEGU","BMOU","HASU","OOLU","APZU","FCIU","INKU","DFSU","TEMU"];
@@ -59,7 +60,7 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
 
   const libres = [...TODAS_POSICIONES];
   // 52 ocupadas de 115, repartidas por todo el patio
-  const cupos: Record<string, number> = { E1: 5, E2: 6, C: 14, B: 8, OF: 2, A: 15, PN: 2 };
+  const cupos: Record<string, number> = { E1: 5, E2: 4, C: 16, B: 8, OF: 2, A: 15, PN: 2 };
   const elegidas: string[] = [];
   for (const z of ZONAS) {
     const dela = libres.filter((p) => p.zonaId === z.id);
@@ -69,12 +70,30 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
 
   const estadias: Estadia[] = [];
   const ubicaciones: Ubicacion[] = [];
+  const tramos: TramoEtapa[] = [];
   const lecturas: Lectura[] = [];
   let n = 0;
 
-  // De las 52, 15 quedan sin tomar en la ronda en curso
+  /**
+   * Etapa según dónde está, como en el patio de verdad:
+   * Cámara 3 y 4 es la única cámara de carga; Cámara 1 y 2 recibe contenedores vacíos.
+   */
+  function etapaDe(posicionId: string, az: number): Etapa {
+    const zona = posicionId.split("-")[0];
+    if (zona === "E2") return "cargando";
+    if (zona === "E1") return "vacio";
+    if (az < 0.14) return "vacio";
+    if (az < 0.26) return "enfriando";
+    return "con_producto";
+  }
+
+  // la etapa se decide primero: de ella depende si al contenedor se le toma temperatura
+  const etapaPorPosicion = new Map(elegidas.map((id) => [id, etapaDe(id, r())]));
+
+  // de las que SÍ se miden, 12 quedan sin tomar en la ronda en curso
+  const medibles = elegidas.filter((id) => exigeTemperatura(etapaPorPosicion.get(id)!));
   const sinTomar = new Set(
-    elegidas.map((id) => ({ id, k: r() })).sort((a, b) => a.k - b.k).slice(0, 15).map((x) => x.id),
+    medibles.map((id) => ({ id, k: r() })).sort((a, b) => a.k - b.k).slice(0, 12).map((x) => x.id),
   );
 
   for (const posicionId of elegidas) {
@@ -84,16 +103,40 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
     const diasAtras = 1 + Math.floor(r() * 4);
     const entrada = ahora - diasAtras * 86_400_000 - Math.floor(r() * 10) * 3600_000;
 
-    // temperatura de base: casi todo correcto, algunos en urgencia, pocos en alerta
+    const etapa = etapaPorPosicion.get(posicionId)!;
+    const conProducto = etapa === "con_producto";
+
+    // Con producto: casi todo correcto, algunos en urgencia, pocos en alerta.
     const d = r();
     const base = d < 0.84 ? -22.4 + r() * 4 : d < 0.95 ? -17.9 + r() * 2.7 : -14.9 + r() * 2.4;
+    // Enfriando: entra caliente (el aire del patio) y va bajando unos 2,4 °C cada 2 horas
+    // hasta asentarse cerca de −20. Unos ya llegaron y otros van a medio camino.
+    const ARRANQUE = 19;        // °C al encender
+    const BAJA = 2.4;           // °C que baja por cada hora fija
+    const PISO = -20.5;
+    const yaBajo = Math.floor(r() * 15);  // cuántas tomas lleva enfriando
 
     estadias.push({
       id, numero, entrada, salida: null,
-      producto: PRODUCTOS[Math.floor(r() * PRODUCTOS.length)]!,
-      sello: "EC" + String(Math.floor(r() * 900000) + 100000),
+      producto: conProducto ? PRODUCTOS[Math.floor(r() * PRODUCTOS.length)]! : "",
+      sello: conProducto ? "EC" + String(Math.floor(r() * 900000) + 100000) : "",
       estado: ESTADOS[Math.floor(r() * ESTADOS.length)]!,
-      conAdvertencia: n === 7, suspendido: null, nota: "",
+      conAdvertencia: n === 7, suspendido: null, etapa, nota: "",
+    });
+
+    // historial de etapas: lo recorrido hasta llegar a la actual
+    const pasos: Etapa[] = etapa === "vacio" ? ["vacio"]
+      : etapa === "enfriando" ? ["vacio", "enfriando"]
+      : etapa === "cargando" ? ["vacio", "enfriando", "cargando"]
+      : ["vacio", "enfriando", "cargando", "con_producto"];
+    const paso = Math.max(1, Math.floor((ahora - entrada) / pasos.length));
+    pasos.forEach((et, j) => {
+      tramos.push({
+        id: `te-${n}-${j}`, estadiaId: id, etapa: et,
+        desde: entrada + j * paso,
+        hasta: j === pasos.length - 1 ? null : entrada + (j + 1) * paso,
+        usuarioId: USUARIO_DEMO,
+      });
     });
 
     // una de cada seis pasó antes por otra posición: mover no reinicia el tiempo en patio
@@ -110,6 +153,9 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
       ubicaciones.push({ id: `u-${n}`, estadiaId: id, posicionId, desde: entrada, hasta: null });
     }
 
+    // D25: a los vacíos no se les toma temperatura, así que no tienen lecturas
+    if (!exigeTemperatura(etapa)) continue;
+
     // lecturas de las últimas 44 horas, en cada hora fija
     const desde = Math.max(entrada, ahora - 44 * 3600_000);
     let i = 0;
@@ -117,7 +163,9 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
       i++;
       const ultima = ranura.dia === ronda.dia && ranura.indice === ronda.indice;
       if (ultima && sinTomar.has(posicionId)) continue;
-      const c = Math.round((base + (r() - 0.5) * 1.3) * 10) / 10;
+      const c = etapa === "enfriando"
+        ? Math.round(Math.max(PISO, ARRANQUE - (yaBajo + i) * BAJA + (r() - 0.5) * 0.9) * 10) / 10
+        : Math.round((base + (r() - 0.5) * 1.3) * 10) / 10;
       const desfase = Math.floor(r() * 44) - 4;
       // un contenedor sin energía al momento de la toma (D3)
       const codigo = n === 11 && ultima ? ("SE" as const) : null;
@@ -136,15 +184,20 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
   estadias.push({
     id: "e-salido", numero: numSalido, entrada: ahora - 6 * 86_400_000, salida: ahora - 2 * 86_400_000,
     producto: "HOSO 30/40", sello: "EC778410", estado: "Despachado",
-    conAdvertencia: false, suspendido: null, nota: "Despachado al buque.",
+    conAdvertencia: false, suspendido: null, etapa: "despachado", nota: "Despachado al buque.",
   });
   ubicaciones.push({
     id: "u-salido", estadiaId: "e-salido", posicionId: "PN-20",
     desde: ahora - 6 * 86_400_000, hasta: ahora - 2 * 86_400_000,
   });
+  tramos.push({
+    id: "te-salido", estadiaId: "e-salido", etapa: "despachado",
+    desde: ahora - 2 * 86_400_000, hasta: null, usuarioId: USUARIO_DEMO,
+  });
 
   await db.transaction("rw",
-    [db.zonas, db.posiciones, db.contenedores, db.estadias, db.ubicaciones, db.lecturas, db.usuarios, db.ajustes],
+    [db.zonas, db.posiciones, db.contenedores, db.estadias, db.ubicaciones, db.tramosEtapa,
+     db.lecturas, db.usuarios, db.ajustes],
     async () => {
       await db.zonas.bulkPut(ZONAS);
       await db.posiciones.bulkPut(TODAS_POSICIONES);
@@ -153,6 +206,7 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
       );
       await db.estadias.bulkPut(estadias);
       await db.ubicaciones.bulkPut(ubicaciones);
+      await db.tramosEtapa.bulkPut(tramos);
       await db.lecturas.bulkPut(lecturas);
       await db.usuarios.put({
         id: USUARIO_DEMO, nombre: "Danilo Zambrano", rol: "patero",
@@ -161,6 +215,7 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
       await db.ajustes.bulkPut([
         { clave: "modo", valor: "demo" },
         { clave: "sembradoMs", valor: ahora },
+        { clave: "idealParaCargar", valor: IDEAL_PARA_CARGAR },
       ]);
     });
 }

@@ -7,12 +7,13 @@ import { Teclado } from "./comp/Teclado";
 import { aNumero, mostrarValor } from "./util";
 import { CODIGOS, ETIQUETA, ICONO, esImprobable, formatearC, rango, type Codigo } from "../dominio/temperatura";
 import { formatear } from "../dominio/iso6346";
-import { hhmm } from "../dominio/tiempo";
+import { hhmmAmPm } from "../dominio/tiempo";
 
 type Props = { vista: VistaPatio; zonas: Zona[]; usuario: Usuario; onSalir: () => void };
 
+// D25: la ronda solo recorre las etapas que exigen temperatura
 const pendientesDe = (vista: VistaPatio, zonaId: string) =>
-  vista.lista.filter((e) => e.posicion.zonaId === zonaId && e.estadia && !e.medidaEnRonda && !e.estadia.suspendido);
+  vista.lista.filter((e) => e.posicion.zonaId === zonaId && e.cuentaEnRonda && !e.medidaEnRonda);
 
 export function Ronda({ vista, zonas, usuario, onSalir }: Props) {
   const [seccion, setSeccion] = useState<string | null>(null);
@@ -24,7 +25,7 @@ export function Ronda({ vista, zonas, usuario, onSalir }: Props) {
   const [verCodigos, setVerCodigos] = useState(false);
   const [confirmar, setConfirmar] = useState<number | null>(null);
 
-  const ocupadas = vista.lista.filter((e) => e.estadia);
+  const ocupadas = vista.lista.filter((e) => e.cuentaEnRonda);
   const hechas = ocupadas.filter((e) => e.medidaEnRonda).length;
   const faltan = ocupadas.length - hechas;
 
@@ -159,7 +160,7 @@ export function Ronda({ vista, zonas, usuario, onSalir }: Props) {
                 <>
                   <span>Anterior:</span>
                   <b>{anterior.c !== null ? formatearC(anterior.c) + " °C" : anterior.codigo}</b>
-                  <span>· {hhmm(anterior.tomadaMs)}</span>
+                  <span>· {hhmmAmPm(anterior.tomadaMs)}</span>
                   {salto > 3 && <span className="salto">· salto de {salto.toFixed(1)} °C</span>}
                 </>
               ) : <span>Sin lectura anterior</span>}
