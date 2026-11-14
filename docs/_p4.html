@@ -1,0 +1,116 @@
+  <!-- 3 · LLEGADA -->
+  <section id="p-llegada" class="panel" hidden>
+    <div class="tel">
+      <div class="tel-cab"><div class="tel-cab-fila"><b>Registrar llegada</b><span class="sinc"><i></i>3 pendientes</span></div></div>
+      <div class="tel-cuerpo">
+        <div class="campo">
+          <label for="f-ubi">Ubicación</label>
+          <div style="display:flex;align-items:center;gap:9px">
+            <b id="f-ubi" style="font-size:21px;letter-spacing:-.01em">SECTOR C · 19</b>
+            <span class="opc" style="margin:0"><span>Se llena sola</span></span>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="f-ser">1 · Número de contenedor <span class="oblig">obligatorio</span></label>
+          <div class="iso mal">
+            <input id="f-pref" value="MSCU" readonly aria-label="Prefijo">
+            <input id="f-ser" value="1281601" readonly aria-label="Dígitos">
+          </div>
+          <p class="ayuda">4 letras + 7 dígitos.</p>
+          <div class="alerta-caja">
+            <b>▲ El dígito verificador no cuadra</b>
+            <p>Según los primeros 10 caracteres, debería terminar en <b style="display:inline;font-family:var(--mono)">8</b>, no en 1. Revisa la placa del contenedor.</p>
+          </div>
+          <div class="btns">
+            <button class="btn btn-pri btn-ch" type="button">Corregir el número</button>
+            <button class="btn btn-rojo btn-ch" type="button">Revisé y está bien, guardar igual</button>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="t-val">2 · Temperatura de llegada <span class="oblig">obligatoria</span></label>
+          <div class="temp-mini"><span class="v" id="t-val">−19</span><span class="u">°C</span><span class="e">✓ Correcto</span></div>
+          <div class="teclas">
+            <button type="button">1</button><button type="button">2</button><button type="button">3</button>
+            <button type="button">4</button><button type="button">5</button><button type="button">6</button>
+            <button type="button">7</button><button type="button">8</button><button type="button">9</button>
+            <button type="button" class="sg">+ / −</button><button type="button">0</button><button type="button" class="bo">,</button>
+          </div>
+          <p class="ayuda">El signo menos ya viene puesto: escribe «19» y se guarda −19.</p>
+        </div>
+        <div class="campo">
+          <label>3 · Opcionales · los puede llenar después cualquiera</label>
+          <div class="opc"><span>Producto ▾</span><span>Sello</span><span>Estado ▾</span><span>Nota</span></div>
+        </div>
+        <button class="btn btn-pri" type="button">Registrar llegada en SECTOR C · 19</button>
+      </div>
+      <div class="tel-pie">
+        <div><em>▦</em>Patio</div><div class="on"><em>＋</em>Llegada</div>
+        <div><em>◷</em>Ronda</div><div><em>⌕</em>Buscar</div><div><em>▤</em>Reportes</div>
+      </div>
+    </div>
+    <div class="notas">
+      <div><h2>Pantalla 3 · Registrar llegada</h2><p>Dos campos obligatorios y nada más: contenedor y temperatura.</p></div>
+      <div class="nota nuevo"><b>Ya está la temperatura de llegada</b><p>Faltaba en la versión anterior. Es obligatoria junto con el contenedor, y usa el mismo teclado de la ronda: el signo menos puesto por defecto, coma para decimales y el color que cambia mientras se teclea.</p></div>
+      <div class="nota marca"><b>El «botón rojo»</b><p>Los 11 caracteres son obligatorios siempre. Si el último dígito no cuadra, la app explica el error y deja <b>«Revisé y está bien, guardar igual»</b>. Esa posición queda en rojo en el plano hasta que el supervisor la confirme.</p></div>
+      <div class="nota"><b>Lo opcional es de verdad opcional</b><p>Producto, Sello y Estado se pueden llenar después desde el teléfono o desde la oficina. Las listas las arma el supervisor; no están escritas en el código.</p></div>
+      <div class="nota"><b>Para que sea rápido</b><p>Sugiere los prefijos ya usados en el patio y autocompleta contenedores que ya estuvieron antes. En la Fase 2, con la lista de contenedores esperados cargada, bastará con elegir de una lista corta.</p></div>
+    </div>
+  </section>
+
+  <!-- 4 · RONDA -->
+  <section id="p-ronda" class="panel" hidden>
+    <div class="tel">
+      <div class="tel-cab"><div class="tel-cab-fila"><b>Ronda de las 10:00</b><span class="sinc"><i></i>3 pendientes</span></div></div>
+      <div class="tel-cuerpo">
+        <div class="ronda-cab">
+          <div class="ronda-cab-fila"><b>Avance</b><span class="cont" id="r-cont">37 / 52</span></div>
+          <div class="barra"><i id="r-barra"></i></div>
+        </div>
+        <div class="mini-caja">
+          <div class="mini-top"><b>Dónde vas</b><span>Lleno = medido</span></div>
+          <div class="mini" id="mini-ronda"></div>
+          <div class="mini-ley">
+            <span><i style="background:var(--ok-pl)"></i>Medido</span>
+            <span><i style="background:var(--ok-pl);box-shadow:inset 0 0 0 3px var(--sup)"></i>Pendiente</span>
+            <span><i style="background:var(--libre-pl)"></i>Libre</span>
+          </div>
+        </div>
+        <div class="actual" id="r-actual"></div>
+        <div class="lector">
+          <div><span class="val">−18</span><span class="uni"> °C</span></div>
+          <div class="est">✓ Correcto</div>
+        </div>
+        <div class="teclas">
+          <button type="button">1</button><button type="button">2</button><button type="button">3</button>
+          <button type="button">4</button><button type="button">5</button><button type="button">6</button>
+          <button type="button">7</button><button type="button">8</button><button type="button">9</button>
+          <button type="button" class="sg">+ / −</button><button type="button">0</button><button type="button" class="bo">,</button>
+        </div>
+        <div class="fila-btn">
+          <button class="btn btn-sec" type="button" style="width:54px" aria-label="Posición anterior">←</button>
+          <button class="btn btn-pri" type="button">Guardar y siguiente →</button>
+        </div>
+        <button class="btn btn-sec btn-ch" type="button">No pude medir · código C D E SE V</button>
+        <div class="sugerencia">
+          <b>Terminaste Sector C</b>
+          <p>Lo siguiente que te queda pendiente, según el orden que sueles seguir:</p>
+          <button class="btn btn-pri btn-ch" type="button">Seguir con Sector B · faltan 4 →</button>
+          <p class="ayuda" style="margin-top:7px">O toca cualquier otra sección en el plano de arriba.</p>
+        </div>
+        <button class="btn btn-sec btn-ch" type="button">↕ Empezar por el final</button>
+      </div>
+      <div class="tel-pie">
+        <div><em>▦</em>Patio</div><div><em>＋</em>Llegada</div>
+        <div class="on"><em>◷</em>Ronda</div><div><em>⌕</em>Buscar</div><div><em>▤</em>Reportes</div>
+      </div>
+    </div>
+    <div class="notas">
+      <div><h2>Pantalla 4 · Ronda de temperatura</h2><p>Tres toques por lectura. Lo demás es para que el patero no se pierda ni se equivoque.</p></div>
+      <div class="nota nuevo"><b>La lectura anterior, a la vista</b><p>Debajo del contenedor sale qué marcó la vez pasada y a qué hora. Si ahora marca −12 y hace dos horas marcaba −21, el patero lo nota al instante en vez de guardarlo y seguir.</p></div>
+      <div class="nota nuevo"><b>Botón para volver atrás</b><p>La flecha ← regresa a la posición anterior. Si se equivocó de tecla, lo corrige sin salir de la ronda.</p></div>
+      <div class="nota nuevo"><b>El mini-plano marca lo medido y lo pendiente</b><p>Lleno = ya medido. Con un hueco en el centro = falta. De un vistazo sabe qué le queda, sin leer una lista.</p></div>
+      <div class="nota nuevo"><b>El orden lo pone el patero, sin configurar nada</b><p>Empieza tocando en el plano la sección donde está parado. Dentro de la sección va en orden ascendente, y si entró por el otro lado, el botón <b>«Empezar por el final»</b> la recorre al revés.</p><p>Al terminar una sección, la página le sugiere la siguiente con un botón grande, pero puede tocar cualquier otra. <b>La página recuerda el orden que cada patero suele seguir</b> y lo usa para sugerir y para el deslizar entre secciones.</p></div>
+      <div class="nota marca"><b>«No pude medir» guarda el código del formato</b><p><b>C</b> Cargando, <b>D</b> Despachado, <b>E</b> En espera, <b>SE</b> Sin energía, <b>V</b> Vacío. Sale impreso en la celda del reporte, no cuenta como atrasada y no entra en el mínimo, máximo ni promedio.</p></div>
+      <div class="nota"><b>Todo esto funciona en modo avión</b><p>Cada lectura se guarda en el teléfono al instante. El contador de pendientes sube; al pasar por WiFi, baja solo.</p></div>
+    </div>
+  </section>

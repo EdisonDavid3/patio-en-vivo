@@ -1,0 +1,91 @@
+  <!-- 5 · DETALLE -->
+  <section id="p-detalle" class="panel" hidden>
+    <div class="tel">
+      <div class="tel-cab"><div class="tel-cab-fila"><b>‹ Sector C</b><span class="sinc"><i></i>3 pendientes</span></div></div>
+      <div class="tel-cuerpo" id="det-cuerpo"></div>
+      <div class="tel-pie">
+        <div class="on"><em>▦</em>Patio</div><div><em>＋</em>Llegada</div>
+        <div><em>◷</em>Ronda</div><div><em>⌕</em>Buscar</div><div><em>▤</em>Reportes</div>
+      </div>
+    </div>
+    <div class="notas">
+      <div><h2>Pantalla 5 · Detalle de una posición</h2><p>Se abre al tocar una posición ocupada, desde el plano o desde la búsqueda.</p></div>
+      <div class="nota nuevo"><b>Las cuatro acciones, en botones grandes</b><p><b>Mover</b> lleva el contenedor a otra posición sin reiniciar el tiempo en patio. <b>Salida</b> cierra la estadía y libera la posición, con confirmación y con deshacer. <b>Corregir</b> cambia el contenedor, sus datos o una temperatura, guardando siempre quién corrigió, cuándo y qué decía antes. <b>Historial</b> abre todo lo que le ha pasado a ese contenedor.</p></div>
+      <div class="nota"><b>Las temperaturas del día, de un vistazo</b><p>Las barritas son las lecturas del día operativo, cada una con su color. Así se ve si viene subiendo desde hace rato o si fue un salto aislado.</p></div>
+      <div class="nota"><b>Tiempo en patio</b><p>Se cuenta desde la entrada, aunque el contenedor haya cambiado de posición. Mover no reinicia nada.</p></div>
+      <div class="nota"><b>Producto, sello y estado se editan aquí</b><p>Es el lugar donde se completa lo que no se llenó al registrar la llegada. Lo puede hacer el patero o el supervisor.</p></div>
+    </div>
+  </section>
+
+  <!-- 6 · BUSCAR -->
+  <section id="p-buscar" class="panel" hidden>
+    <div class="tel">
+      <div class="tel-cab"><div class="tel-cab-fila"><b>Buscar contenedor</b><span class="sinc"><i></i>3 pendientes</span></div></div>
+      <div class="tel-cuerpo">
+        <div class="busca-caja">
+          <input id="q" type="text" inputmode="numeric" value="3461" autocomplete="off"
+                 aria-label="Últimos dígitos del contenedor" placeholder="últimos dígitos">
+          <p class="ayuda" style="text-align:center">Escribe los últimos números. Borra y prueba con 0619 o 8440.</p>
+        </div>
+        <div class="mini-caja">
+          <div class="mini-top"><b>Dónde está</b><span id="q-donde">—</span></div>
+          <div class="mini" id="mini-buscar"></div>
+        </div>
+        <div class="sec-cab"><b id="q-tit">En el patio</b></div>
+        <div class="res-busca" id="q-res"></div>
+      </div>
+      <div class="tel-pie">
+        <div><em>▦</em>Patio</div><div><em>＋</em>Llegada</div>
+        <div><em>◷</em>Ronda</div><div class="on"><em>⌕</em>Buscar</div><div><em>▤</em>Reportes</div>
+      </div>
+    </div>
+    <div class="notas">
+      <div><h2>Pantalla 6 · Buscar</h2><p>Funciona de verdad en esta maqueta: borra el número y escribe otro.</p></div>
+      <div class="nota nuevo"><b>Se busca por los últimos dígitos</b><p>Es como los identifican en el patio. Nadie dice «el MSCU uno dos ocho uno seis cero ocho»: dicen «el ocho uno sesenta».</p></div>
+      <div class="nota nuevo"><b>El cuadrito parpadea en el plano</b><p>Al encontrarlo, su posición parpadea en el mini-plano y la lista baja sola hasta su fila. No hay que ir contando posiciones.</p></div>
+      <div class="nota"><b>También busca en el historial</b><p>Si el contenedor ya salió del patio, aparece abajo con la fecha en que salió y se puede abrir su historial completo.</p></div>
+      <div class="nota"><b>Tocar un resultado abre el detalle</b><p>Y desde ahí, mover, salida, corregir o historial.</p></div>
+    </div>
+  </section>
+
+  <!-- 7 · REPORTE -->
+  <section id="p-reporte" class="panel-ancho" hidden>
+    <div class="notas" style="max-width:none;margin-bottom:16px">
+      <div><h2>Pantalla 7 · Reporte diario</h2>
+      <p>El formato oficial que recibe la jefa, generado solo. Es el <b>día operativo cerrado del 13 de noviembre</b> (08:00 del 13 a 06:00 del 14); las otras pantallas muestran hoy, 14 de noviembre, con la ronda de las 10:00 a medio hacer. En pantalla con colores; al imprimir, igual al papel. En el celular, desliza la hoja hacia los lados.</p></div>
+    </div>
+    <div class="turnos-ley"><span style="font-weight:700;color:var(--tinta)">Hoja 1 de 6 · contenedores 1 a 10 de 52</span>
+      <span><i style="background:var(--sup)"></i>Turno día · 8:00 a. m. a 6:00 p. m.</span>
+      <span><i style="background:var(--sup3)"></i>Turno noche · 8:00 p. m. a 6:00 a. m.</span>
+    </div>
+    <div class="hoja-env">
+      <div class="hoja">
+        <div class="hoja-cab">
+          <img src="__LOGO__" alt="Total Seafood">
+          <div class="t"><b>CÁMARA DE ALMACENAMIENTO DE CONGELADO</b><span>Control de contenedores y registro de temperaturas</span></div>
+        </div>
+        <div class="hoja-meta">
+          <div><b>FECHA:</b> 13/11/2026 <span style="color:var(--tinta3)">· 08:00 → 06:00</span></div>
+          <div><b>RESPONSABLE TURNO DÍA:</b> Danilo Zambrano</div>
+          <div><b>RESPONSABLE TURNO NOCHE:</b> Luis Mendoza</div>
+        </div>
+        <div class="hoja-nota">Temperatura en °C | Rango aceptable: −18 °C o más frío | Toda lectura fuera de rango está encerrada y anotada en Observaciones</div>
+        <table class="rep" id="tabla"></table>
+        <div class="hoja-ley">Leyenda ESTADO / lecturas: C = Cargando · D = Despachado · E = En espera · SE = Sin energía · V = Vacío · Se usa el código en la celda cuando no se pudo tomar la lectura.</div>
+        <div class="hoja-pie">
+          <div><b>Observaciones</b><div id="obs"></div></div>
+          <div><b>Turno día</b><div class="ln">Nombre: Danilo Zambrano</div><div class="ln">Hora de entrega de turno: 7:05 p. m.</div></div>
+          <div><b>Turno noche</b><div class="ln">Nombre: Luis Mendoza</div><div class="ln">Hora de entrega de turno: 7:10 a. m.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="notas" style="max-width:none;margin-top:16px">
+      <div class="nota nuevo"><b>Los turnos ya no se confunden con una advertencia</b><p>Antes el turno día iba en el mismo amarillo que una temperatura en urgencia y parecía que todo el turno estaba en aviso. Ahora los turnos se distinguen con dos grises neutros y una barra en la etiqueta de la hora. El amarillo quedó reservado para lo que de verdad es urgencia.</p></div>
+      <div class="nota marca"><b>Sin Código, Versión ni Página</b><p>Como pediste. El encabezado queda con el logo, el título y la fecha.</p></div>
+      <div class="nota"><b>Hora de ingreso y hora de salida salen solas</b><p>Dos filas del formato oficial que la app llena con la hora real de la llegada y de la salida.</p></div>
+      <div class="nota"><b>Mínimo, máximo y promedio calculados</b><p>Solo con lecturas numéricas. Las celdas con código (SE, D) no entran, igual que cuando se hace a mano.</p></div>
+      <div class="nota"><b>Lo que no se tomó se ve</b><p>La celda con un guión rojo es una toma no realizada. En el papel eso se perdía.</p></div>
+      <div class="nota"><b>10 contenedores por hoja</b><p>Con 52 ocupadas salen 6 hojas. Se imprime en A4 o en carta, y se exporta a Excel.</p></div>
+    </div>
+  </section>
+</main>

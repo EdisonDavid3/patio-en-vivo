@@ -1,0 +1,194 @@
+<script>
+const D = /*__DATOS__*/;
+const ORDEN = ["E1","E2","C","B","OF","A","PN"];
+const Z = id => D.zonas.find(z => z.id === id);
+const nf = n => (n < 0 ? "−" : "") + Math.abs(n).toFixed(1);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = n => n.slice(0,4) + " " + n.slice(4,10) + " " + n.slice(10);
+function clase(o){
+  if(!o) return "libre";
+  if(o.cod) return "cod";
+  if(o.t <= -18) return "ok";
+  if(o.t <= -15) return "avi";
+  return "ale";
+}
+const ET = {ok:"✓ Correcto", avi:"! Urgencia", ale:"▲ Alerta", cod:"Sin lectura", libre:"Libre"};
+const ocup = k => D.ocupadas[k] || null;
+function posiciones(zid){ const z = Z(zid); const a = []; for(let p = z.desde; p <= z.hasta; p++) a.push(zid+"-"+p); return a; }
+function pasa(k, f){
+  const o = ocup(k);
+  if(f.alertas && !(o && (clase(o) === "ale" || clase(o) === "avi"))) return false;
+  if(f.pendientes && !(o && !o.medida)) return false;
+  return true;
+}
+const TODAS = ORDEN.flatMap(posiciones);
+const OCUPADAS = TODAS.filter(ocup);
+
+/* ---------- resumen ---------- */
+function cuentas(){
+  let ale = 0, avi = 0, pend = 0;
+  for(const k of OCUPADAS){
+    const c = clase(ocup(k));
+    if(c === "ale") ale++; else if(c === "avi") avi++;
+    if(!ocup(k).medida) pend++;
+  }
+  return {ocupadas: OCUPADAS.length, libres: TODAS.length - OCUPADAS.length, ale, avi, pend};
+}
+(function(){
+  const c = cuentas();
+  document.getElementById("res-tel").innerHTML =
+      '<div><b class="tn">'+c.ocupadas+'</b><span>Ocupadas</span></div>'
+    + '<div><b class="tn">'+c.libres+'</b><span>Libres</span></div>'
+    + '<div class="c-avi"><b class="tn">'+c.avi+'</b><span>Urgencia</span></div>'
+    + '<div class="c-ale"><b class="tn">'+c.ale+'</b><span>Alerta</span></div>';
+  document.getElementById("res-pc").innerHTML =
+      '<div><b class="tn">'+c.ocupadas+'</b><span>Ocupadas</span></div>'
+    + '<div><b class="tn">'+c.libres+'</b><span>Libres</span></div>'
+    + '<div class="c-avi"><b class="tn">'+c.avi+'</b><span>En urgencia</span></div>'
+    + '<div class="c-ale"><b class="tn">'+c.ale+'</b><span>En alerta</span></div>'
+    + '<div><b class="tn">'+c.pend+'</b><span>Sin tomar 10:00</span></div>';
+})();
+
+/* ---------- mini-plano ---------- */
+function miniPlano(el, op){
+  op = op || {};
+  let h = "";
+  for(const grupo of D.grupos){
+    h += '<div class="mini-col">';
+    for(const zid of grupo){
+      const z = Z(zid), act = op.activa === zid;
+      h += '<button type="button" class="mini-z'+(act ? " aqui" : "")+'" data-z="'+zid+'" aria-label="'+esc(z.nombre)+'">'
+         + '<em>'+esc(zid === "OF" ? "OFIC" : zid)+'</em>'
+         + '<div class="mini-rej" style="grid-template-columns:repeat('+z.cols+',14px)">';
+      for(const k of posiciones(zid)){
+        const o = ocup(k);
+        let cl = "cua " + clase(o);
+        if(op.modo === "ronda" && o && !o.medida) cl += " pendiente";
+        if(op.filtro && !pasa(k, op.filtro)) cl += " apagado";
+        if(op.flash === k) cl += " flash";
+        h += '<i class="'+cl+'" data-k="'+k+'" title="'+esc(k.replace("-"," "))+'"></i>';
+      }
+      h += '</div></button>';
+    }
+    h += '</div>';
+  }
+  el.innerHTML = h;
+}
+
+/* ---------- lista de una sección ---------- */
+function filaHTML(k, op){
+  op = op || {};
+  const o = ocup(k), c = clase(o), z = Z(k.split("-")[0]);
+  const id = (k.split("-")[0] === "OF" ? "OF" : k.split("-")[0]) + " " + k.split("-")[1];
+  if(!o) return '<button type="button" class="fila libre" data-k="'+k+'"><span class="f-id">'+id+'</span>'
+       + '<span class="f-med"><span class="f-est">Libre</span></span><span class="f-der"></span></button>';
+  const val = o.cod ? o.cod : nf(o.t) + " °C";
+  return '<button type="button" class="fila '+c+(op.destaca ? " destaca" : "")+'" data-k="'+k+'">'
+     + '<span class="f-id">'+id+'</span>'
+     + '<span class="f-med"><span class="f-num">'+fmt(o.n)+'</span><span class="f-est">'+ET[c]
+     + (o.medida ? "" : '<span class="sinmedir">Sin tomar</span>')+'</span></span>'
+     + '<span class="f-der"><span class="f-t">'+val+'</span><br><span class="f-h">'+o.h+'</span></span></button>';
+}
+
+/* ---------- pantalla 1: patio en el teléfono ---------- */
+const S = {activa:"C", filtro:{alertas:false, pendientes:false}, flash:null};
+function pintaTel(){
+  miniPlano(document.getElementById("mini-tel"), {activa:S.activa, filtro:S.filtro, flash:S.flash});
+  const z = Z(S.activa);
+  document.getElementById("sec-nom").textContent = z.nombre;
+  const ks = posiciones(S.activa).filter(k => pasa(k, S.filtro));
+  const lista = document.getElementById("lista-tel");
+  lista.innerHTML = ks.length
+    ? ks.map(k => filaHTML(k, {destaca: S.flash === k})).join("")
+    : '<p class="vacio">Nada que mostrar en '+esc(z.nombre)+' con este filtro.</p>';
+  const ocupZ = posiciones(S.activa).filter(ocup).length;
+  document.getElementById("mini-sub").textContent = z.nombre + " · " + ocupZ + " ocupadas";
+  if(S.flash){ const f = lista.querySelector('[data-k="'+S.flash+'"]'); if(f) f.scrollIntoView({block:"center"}); }
+}
+document.getElementById("mini-tel").addEventListener("click", e => {
+  const b = e.target.closest("[data-z]"); if(!b) return;
+  S.activa = b.dataset.z; S.flash = null; pintaTel();
+});
+document.getElementById("lista-tel").addEventListener("click", e => {
+  const b = e.target.closest("[data-k]"); if(!b || !ocup(b.dataset.k)) return;
+  abreDetalle(b.dataset.k);
+});
+function mueve(d){
+  const i = ORDEN.indexOf(S.activa);
+  S.activa = ORDEN[(i + d + ORDEN.length) % ORDEN.length]; S.flash = null; pintaTel();
+}
+document.getElementById("ant-sec").addEventListener("click", () => mueve(-1));
+document.getElementById("sig-sec").addEventListener("click", () => mueve(1));
+document.getElementById("filtros-tel").addEventListener("click", e => {
+  const b = e.target.closest("[data-f]"); if(!b) return;
+  S.filtro[b.dataset.f] = b.getAttribute("aria-pressed") !== "true";
+  b.setAttribute("aria-pressed", String(S.filtro[b.dataset.f]));
+  pintaTel();
+});
+(function(){   /* deslizar entre secciones */
+  const el = document.getElementById("lista-tel");
+  let x0 = null, y0 = null;
+  el.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, {passive:true});
+  el.addEventListener("touchend", e => {
+    if(x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    if(Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6) mueve(dx < 0 ? 1 : -1);
+    x0 = null;
+  }, {passive:true});
+})();
+pintaTel();
+
+/* ---------- pantalla 2: patio en PC ---------- */
+const Fpc = {alertas:false, pendientes:false};
+function pintaPC(){
+  let h = "";
+  for(const grupo of D.grupos){
+    h += '<div class="plano-col">';
+    for(const zid of grupo){
+      const z = Z(zid);
+      h += '<div class="tz"><div class="tz-cab">'+esc(z.cap)+'</div><table class="tzt">'
+         + '<thead><tr><th class="c-nro">Nº</th><th style="text-align:left">Contenedor</th><th style="text-align:right">Temp.</th><th style="text-align:right">Hora</th></tr></thead><tbody>';
+      for(const k of posiciones(zid)){
+        const o = ocup(k), c = clase(o), p = k.split("-")[1];
+        const vis = pasa(k, Fpc);
+        if(!o) h += '<tr class="r-libre"'+(vis?"":' style="opacity:.25"')+'><td class="c-nro">'+p+'</td><td class="c-cont">libre</td><td class="c-t">—</td><td class="c-h"></td></tr>';
+        else h += '<tr class="r-'+c+'"'+(vis?"":' style="opacity:.25"')+'><td class="c-nro">'+p+'</td>'
+           + '<td class="c-cont">'+o.n+(o.medida?"":' <span style="color:var(--acento-tinta);font-family:var(--sans);font-size:9px;font-weight:700">SIN TOMAR</span>')+'</td>'
+           + '<td class="c-t">'+(o.cod ? o.cod : nf(o.t))+'</td><td class="c-h">'+o.h+'</td></tr>';
+      }
+      h += '</tbody></table></div>';
+    }
+    h += '</div>';
+  }
+  document.getElementById("plano-pc").innerHTML = h;
+}
+document.getElementById("filtros-pc").addEventListener("click", e => {
+  const b = e.target.closest("[data-f]"); if(!b) return;
+  Fpc[b.dataset.f] = b.getAttribute("aria-pressed") !== "true";
+  b.setAttribute("aria-pressed", String(Fpc[b.dataset.f]));
+  pintaPC();
+});
+pintaPC();
+
+/* ---------- pantalla 4: ronda ---------- */
+(function(){
+  const pend = D.ronda.pendientes, hechas = OCUPADAS.length - pend.length;
+  document.getElementById("r-cont").textContent = hechas + " / " + OCUPADAS.length;
+  document.getElementById("r-barra").style.width = Math.round(hechas / OCUPADAS.length * 100) + "%";
+  const k = pend[0], o = ocup(k), z = Z(k.split("-")[0]);
+  miniPlano(document.getElementById("mini-ronda"), {activa:k.split("-")[0], modo:"ronda", flash:k});
+  document.getElementById("r-actual").innerHTML =
+      '<div class="ubi">'+esc(z.nombre)+'</div><div class="pid">'+k.split("-")[1]+'</div>'
+    + '<div class="cnum">'+fmt(o.n)+'</div>'
+    + '<div class="anterior">Lectura anterior: <b>'+nf(o.ant.t)+' °C</b> · <b>'+o.ant.h+'</b></div>';
+  /* sugerencia con números reales */
+  const porZona = {};
+  for(const p of pend){ const zz = p.split("-")[0]; porZona[zz] = (porZona[zz]||0) + 1; }
+  const zAct = k.split("-")[0];
+  const sig = ORDEN.filter(x => x !== zAct && porZona[x]).sort((a,b) => ORDEN.indexOf(a) - ORDEN.indexOf(b))[0];
+  const sug = document.querySelector("#p-ronda .sugerencia");
+  sug.innerHTML = '<b>Vas en '+esc(Z(zAct).nombre)+' · te faltan '+porZona[zAct]+'</b>'
+    + '<p>Cuando la termines, lo siguiente pendiente según el orden que sueles seguir:</p>'
+    + '<button class="btn btn-pri btn-ch" type="button">Seguir con '+esc(Z(sig).nombre)+' · faltan '+porZona[sig]+' →</button>'
+    + '<p class="ayuda" style="margin-top:7px">O toca cualquier otra sección en el plano de arriba.</p>';
+})();

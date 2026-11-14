@@ -1,0 +1,141 @@
+/* ---------- pantalla 5: detalle ---------- */
+function abreDetalle(k){
+  const o = ocup(k); if(!o) return;
+  const c = clase(o), z = Z(k.split("-")[0]), p = k.split("-")[1];
+  const val = o.cod ? o.cod : nf(o.t) + " °C";
+  const r = D.reporte.find(x => x.n === o.n);
+  /* lecturas de HOY: solo las que ya se tomaron (08:00 y, si ya la midieron, 10:00) */
+  const serie = new Array(12).fill(null);
+  if(o.medida){ serie[0] = {v:o.ant.t}; serie[1] = o.cod ? {c:o.cod} : {v:o.t}; }
+  else { serie[0] = {v:o.t}; }
+  const hechas = serie.filter(Boolean).length;
+  const vals = serie.filter(x => x && x.v !== undefined).map(x => x.v);
+  const lo = Math.min(...vals, -24), hi = Math.max(...vals, -11);
+  const barras = serie.map(x => {
+    if(!x) return '<i class="vacio"></i>';
+    if(x.c) return '<i class="cod" style="height:26%"></i>';
+    const cc = x.v <= -18 ? "" : (x.v <= -15 ? "avi" : "ale");
+    return '<i class="'+cc+'" style="height:'+(22 + (hi - x.v) / (hi - lo) * 74).toFixed(0)+'%"></i>';
+  }).join("");
+  const rotulos = ["8","10","12","2","4","6","8","10","12","2","4","6"]
+      .map(t => '<span>'+t+'</span>').join("");
+  const cuerpo = document.getElementById("det-cuerpo");
+  cuerpo.innerHTML =
+      '<div class="det-cab" style="border-left-color:var(--'+(c==="ok"?"ok":c==="avi"?"avi":c==="ale"?"ale":"nul")+'-pl)">'
+    +   '<div class="ubi">'+esc(z.nombre)+'</div><div class="pid">Posición '+p+'</div>'
+    +   '<div class="cnum">'+fmt(o.n)+'</div>'
+    +   '<div class="det-t"><span class="v" style="color:var(--'+(c==="ok"?"ok":c==="avi"?"avi":c==="ale"?"ale":"nul")+')">'+val+'</span>'
+    +     '<span class="e" style="color:var(--'+(c==="ok"?"ok":c==="avi"?"avi":c==="ale"?"ale":"nul")+')">'+ET[c]+'</span>'
+    +     '<span class="h">'+o.h+'</span></div></div>'
+    + '<div class="campo"><label>Temperaturas del día operativo</label>'
+    +   '<div class="spark">'+barras+'</div><div class="spark-h">'+rotulos+'</div>'
+    +   '<p class="ayuda">Van '+hechas+' de 12 tomas del día operativo. Lectura anterior: <b>'
+    +     nf(o.ant.t)+' °C</b> a las '+o.ant.h+'.</p></div>'
+    + '<div class="campo"><label>Datos del formato</label><dl class="dl">'
+    +   '<dt>Producto</dt><dd>'+(r ? esc(r.p) : "HOSO 40/50")+'</dd>'
+    +   '<dt>Sello</dt><dd>'+(r ? esc(r.s) : "EC418203")+'</dd>'
+    +   '<dt>Estado</dt><dd>'+(r ? esc(r.e) : "En espera")+'</dd>'
+    +   '<dt>Hora ingreso</dt><dd>'+(r ? esc(r.in) : "8:40 a. m.")+'</dd>'
+    +   '<dt>Tiempo en patio</dt><dd>2 d 6 h</dd>'
+    +   '<dt>Posiciones</dt><dd>PN 4 → '+esc(k.replace("-"," "))+'</dd>'
+    +   '</dl><p class="ayuda">Mover de posición no reinicia el tiempo en patio.</p></div>'
+    + '<div class="acc">'
+    +   '<button type="button"><em>⇄</em>Mover</button>'
+    +   '<button type="button" class="pel"><em>⤴</em>Salida</button>'
+    +   '<button type="button"><em>✎</em>Corregir</button>'
+    +   '<button type="button"><em>◷</em>Historial</button></div>'
+    + '<button class="btn btn-sec btn-ch" type="button">+ Nota en esta posición</button>';
+  verPestana("detalle");
+}
+
+/* ---------- pantalla 6: buscar ---------- */
+(function(){
+  const q = document.getElementById("q"), res = document.getElementById("q-res");
+  const tit = document.getElementById("q-tit"), donde = document.getElementById("q-donde");
+  function busca(){
+    const t = q.value.replace(/\s/g, "").toUpperCase();
+    const hits = t.length < 2 ? [] : OCUPADAS.filter(k => ocup(k).n.toUpperCase().includes(t));
+    const flash = hits[0] || null;
+    miniPlano(document.getElementById("mini-buscar"), {activa: flash ? flash.split("-")[0] : null, flash: flash});
+    if(!t.length){ tit.textContent = "Escribe para buscar"; donde.textContent = "—"; res.innerHTML = '<p class="vacio">Los contenedores que están en el patio aparecen aquí.</p>'; return; }
+    if(!hits.length){
+      tit.textContent = "Sin resultados en el patio"; donde.textContent = "—";
+      res.innerHTML = '<p class="vacio">Ningún contenedor en el patio termina en «'+esc(t)+'».<br>En el historial hay 2 que ya salieron.</p>';
+      return;
+    }
+    tit.textContent = hits.length === 1 ? "1 contenedor" : hits.length + " contenedores";
+    donde.textContent = Z(flash.split("-")[0]).nombre + " · " + flash.split("-")[1];
+    res.innerHTML = hits.map((k, i) => filaHTML(k, {destaca: i === 0})).join("")
+      + '<p class="ayuda" style="text-align:center;margin-top:6px">También hay 2 en el historial que ya salieron del patio.</p>';
+  }
+  q.addEventListener("input", busca);
+  res.addEventListener("click", e => { const b = e.target.closest("[data-k]"); if(b && ocup(b.dataset.k)) abreDetalle(b.dataset.k); });
+  busca();
+})();
+
+/* ---------- pantalla 7: reporte ---------- */
+(function(){
+  const R = D.reporte, T = document.getElementById("tabla");
+  let h = '<thead><tr><th class="et">N.º</th>';
+  for(let i = 1; i <= 10; i++) h += '<th>'+i+'</th>';
+  h += '</tr></thead><tbody>';
+  const fila = (et, f, cls) => {
+    let r = '<tr'+(cls ? ' class="'+cls+'"' : '')+'><td class="et">'+et+'</td>';
+    for(const c of R) r += f(c);
+    return r + '</tr>';
+  };
+  h += fila("Contenedor",   c => '<td class="cn">'+c.n+'</td>');
+  h += fila("Ubicación",    c => '<td>'+esc(c.u)+'</td>');
+  h += fila("Producto",     c => '<td>'+esc(c.p)+'</td>');
+  h += fila("Sello",        c => '<td>'+esc(c.s)+'</td>');
+  h += fila("Estado",       c => '<td>'+esc(c.e)+'</td>');
+  h += fila("Hora ingreso", c => '<td>'+esc(c.in)+'</td>');
+  h += fila("Hora salida",  c => '<td>'+(c.out ? esc(c.out) : "—")+'</td>');
+  h += '<tr><td class="et" style="background:var(--azul);color:#fff">Hora</td>'
+     + '<td colspan="10" style="background:var(--azul);color:#fff;font-weight:650">LECTURAS DE TEMPERATURA (°C)</td></tr>';
+  D.horas.forEach((hora, j) => {
+    h += fila(hora, c => {
+      const l = c.l[j];
+      if(l === null) return '<td class="v-nul">—</td>';
+      if(l.c) return '<td class="v-cod">'+l.c+'</td>';
+      const cc = l.v <= -18 ? "v-ok" : (l.v <= -15 ? "v-avi" : "v-ale");
+      return '<td class="'+cc+'">'+nf(l.v)+'</td>';
+    }, j < 6 ? "dia" : "noche");
+  });
+  const nums = c => c.l.filter(x => x && x.v !== undefined).map(x => x.v);
+  h += fila("Mínimo",   c => { const n = nums(c); return '<td>'+(n.length ? nf(Math.min(...n)) : "—")+'</td>'; }, "calc");
+  h += fila("Máximo",   c => { const n = nums(c); return '<td>'+(n.length ? nf(Math.max(...n)) : "—")+'</td>'; }, "calc");
+  h += fila("Promedio", c => { const n = nums(c); return '<td>'+(n.length ? nf(n.reduce((a,b) => a+b, 0) / n.length) : "—")+'</td>'; }, "calc");
+  T.innerHTML = h + '</tbody>';
+  document.getElementById('obs').innerHTML = D.obs.map(t => '<div class="ln">'+esc(t)+'</div>').join('');
+})();
+
+/* ---------- pestañas y tema ---------- */
+const PANELES = ["tel","pc","llegada","ronda","detalle","buscar","reporte"];
+function verPestana(id){
+  for(const x of document.querySelectorAll("#pest button")) x.setAttribute("aria-selected", String(x.dataset.p === id));
+  for(const s of PANELES) document.getElementById("p-"+s).hidden = (s !== id);
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+document.getElementById("pest").addEventListener("click", e => {
+  const b = e.target.closest("button[data-p]"); if(b) verPestana(b.dataset.p);
+});
+abreDetalle("C-9");
+verPestana("tel");
+
+(function(){
+  const raiz = document.documentElement, btn = document.getElementById("tema");
+  const ic = document.getElementById("tema-ic"), tx = document.getElementById("tema-tx");
+  const oscuro = () => raiz.getAttribute("data-theme") === "dark"
+    || (!raiz.hasAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+  const pinta = () => { const o = oscuro(); ic.textContent = o ? "☀" : "☾"; tx.textContent = o ? "Turno día" : "Turno noche"; };
+  try { const g = localStorage.getItem("ts-tema"); if(g) raiz.setAttribute("data-theme", g); } catch(e){}
+  pinta();
+  btn.addEventListener("click", () => {
+    const n = oscuro() ? "light" : "dark";
+    raiz.setAttribute("data-theme", n);
+    try { localStorage.setItem("ts-tema", n); } catch(e){}
+    pinta();
+  });
+})();
+</script>

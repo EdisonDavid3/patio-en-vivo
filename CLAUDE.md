@@ -1,0 +1,161 @@
+# CLAUDE.md — Patio en Vivo (Total Seafood)
+
+Contexto para retomar el proyecto en sesiones futuras. **Mantener actualizado.**
+Última actualización: 14-nov-2026.
+
+---
+
+## Qué es
+Página web (PWA) que reemplaza dos formatos en papel del patio de contenedores refrigerados de
+Total Seafood (empacadora/exportadora de camarón congelado, Ecuador):
+1. **Hoja de patio** — qué contenedor hay en cada posición (2 veces al día, turno día y noche).
+2. **Control de contenedores y registro de temperaturas** — temperatura cada 2 horas, con mínimo,
+   máximo, promedio, observaciones y responsables de turno. Se entrega diariamente a la jefa.
+
+Documento maestro del plan: `PLAN.md`. Formatos originales en `docs/formatos/`.
+
+## Cómo trabajar con Edison
+- **No es programador.** Explicar todo en lenguaje sencillo y guiarlo paso a paso en lo que él deba hacer.
+- Antes de codificar: preguntar lo que cambie el diseño → plan → aprobación.
+- Trabajar por fases; al cerrar cada una, decirle **qué probar y cómo**.
+- **Verificar versiones y APIs en la documentación actual.** No asumirlas de memoria.
+- Cuenta de GitHub conectada: `EdisonDavid3`.
+
+---
+
+## Decisiones cerradas
+
+| # | Decisión | Fecha |
+|---|---|---|
+| D1 | **Número de contenedor: ISO 6346 completo obligatorio** (4 letras + 7 dígitos). No se admiten 4 dígitos. | 14-nov |
+| D2 | **Dígito verificador que no cuadra → "botón rojo"**: se explica el error y se ofrece *"Revisé y está bien, guardar igual"*; la posición queda marcada en rojo para revisión del supervisor. No es bloqueo absoluto. | 14-nov |
+| D3 | **Lecturas imposibles de tomar se guardan como código** C/D/E/SE/V con motivo. Además el supervisor puede marcar un contenedor entero como *sin energía* o *vacío* y la app deja de pedirle temperatura. | 14-nov |
+| D4 | **Importar lista de contenedores esperados: Fase 2.** Fases 0 y 1 a mano con autocompletado. Modelo de datos ya preparado. | 14-nov |
+| D5 | **Firmas: solo nombre y hora de entrega de turno.** Sin espacio de firma ni firma dibujada. | 14-nov |
+| D6 | **Encabezado del reporte: se eliminan Código, Versión y Página.** Queda logo, título y fecha. | 14-nov |
+| D7 | **Publicación: GitHub Pages.** Cloudflare Pages descartado (era comodidad, no necesidad). | 14-nov |
+| D8 | **PIN nunca viaja al servidor.** Activación del teléfono con código de un solo uso del supervisor; el PIN solo descifra la credencial local. | 14-nov |
+| D9 | **Impresión en A4 y carta.** El formato oficial original es carta horizontal; A4 por defecto. | 14-nov |
+| D10 | **Colores en pantalla: 3 rangos** (verde / amarillo -18 a -15 / rojo > -15). **En el papel impreso: criterio del formato oficial** (fuera de rango = más caliente que -18). Configurable. | 14-nov |
+| D11 | **La vista principal del patio es la hoja viva**, con la disposición del PDF modelo. En PC/tablet: plano completo con las 7 tablas, para dejarlo abierto en la oficina actualizándose solo. En teléfono: **mini-plano fijo arriba** con las 115 posiciones como cuadritos de color sin texto; al tocar una sección se abre debajo y queda resaltada como «estás aquí»; deslizar pasa a la sección vecina; el zoom con los dedos sobre la hoja completa es solo vista de consulta en horizontal. | 14-nov |
+| D12 | **Filtros «Solo alertas» y «Sin tomar en esta ronda»** en teléfono y en PC. | 14-nov |
+| D13 | El rango -18 a -15 se llama **«Urgencia»**, no «Aceptable». | 14-nov |
+| D14 | **Registrar llegada exige temperatura** además del contenedor. Mismo teclado que la ronda. | 14-nov |
+| D15 | **Reporte: los turnos se distinguen con dos grises neutros.** El amarillo queda solo para las lecturas en urgencia. | 14-nov |
+| D16 | **Ronda: se muestra la lectura anterior** (valor y hora), hay **botón para volver a la posición anterior**, y el mini-plano marca medidas y pendientes. | 14-nov |
+| D17 | **Orden de la ronda sin pantalla de configuración**: el patero empieza tocando la sección donde está; dentro va ascendente con botón «Empezar por el final»; al terminar, la app sugiere la siguiente pendiente con un botón grande pero puede tocar cualquier otra; **la app recuerda el orden habitual de cada patero** (preferencia guardada en `usuarios`) y lo usa para sugerir y para el deslizar. | 14-nov |
+| D18 | **Pantallas nuevas**: detalle de posición (Mover / Salida / Corregir / Historial) y Buscar por los últimos dígitos, con parpadeo del cuadrito en el plano y scroll automático a la fila. | 14-nov |
+
+## Entregables
+- `PLAN.md` — plan aprobado.
+- `docs/propuesta-pantallas.html` — propuesta visual, publicada en
+  https://claude.ai/artifact/7ZUHqj48LxemHT73kWbURo (v2, 14-nov). Siete pantallas: patio en teléfono,
+  patio en PC, llegada, ronda, detalle, buscar y reporte diario.
+  Se arma con `docs/_p1..._p7.html` + `docs/_datos.json`; el ensamblado concatena las partes y
+  sustituye `/*__DATOS__*/` y `__LOGO__`.
+- `docs/formatos/` — los dos PDF oficiales y el logo.
+
+## Pendiente de Edison
+- [ ] Nombre del repositorio (sugerido: `patio-en-vivo`).
+- [ ] Lista real de opciones de **Producto** y de **Estado**.
+- [ ] Nombres de los pateros y quién es supervisor.
+- [ ] Un Android y un iPhone reales para probar (Fase 1).
+- [ ] Cuenta gratis en supabase.com (Fase 1).
+
+---
+
+## Datos del patio — 115 posiciones (verificadas contra el PDF modelo)
+
+| Zona | Nº | Numeración |
+|---|---|---|
+| E1 — Cámara 1 y 2 | 5 | 1–5 |
+| E2 — Cámara 3 y 4 | 6 | **6–11** (no empieza en 1) |
+| Sector C | 22 | 1–22 |
+| Sector B | 20 | 1–20 |
+| Sector A | 32 | 1–32 |
+| Oficina | 6 | 1–6 (en el papel aparece con la letra "A"; en la web **solo "Oficina"**) |
+| Patio Nuevo | 24 | 1–24 |
+
+Orden del patio (para reportes y ronda guiada): E1 → E2 → C → B → A → Oficina → Patio Nuevo.
+
+## Identidad visual — colores exactos del archivo del logo
+```
+rojo  #C1262E     azul  #15488B     gris  #A9AAAB     fondo blanco
+```
+Alto contraste para el sol; modo oscuro para el turno de noche.
+Siempre **color + icono + texto**, nunca solo color.
+
+## Reglas de negocio que no se negocian
+- **Día operativo**: 08:00 → 06:00 del día siguiente. **Corte a las 07:00.** Mínimos, máximos,
+  promedios y reportes usan el día operativo, no el calendario.
+- **Horas fijas de ronda**: 08, 10, 12, 14, 16, 18, 20, 22, 00, 02, 04, 06. Turno día 08→18, noche 20→06.
+- **Ventana de asignación** de una lectura a su hora fija: ±50 min (configurable). Fuera de ventana = atrasada.
+- **Mover de posición NO reinicia el tiempo en patio** (la estadía continúa; se agrega una ubicación nueva).
+- **Mínimo/máximo/promedio ignoran las celdas con código** (SE, V, etc.).
+- **Un contenedor no puede estar en dos posiciones.**
+- **Conflictos**: gana el más reciente, no se pierde ninguno, el supervisor ve un aviso.
+- **La hora de un registro es la del teléfono al momento de la toma**; se guarda también el desfase
+  contra el servidor detectado al sincronizar.
+- Zona horaria `America/Guayaquil`. Pantalla en 24 h; reporte oficial en a. m. / p. m. Español, °C.
+- Botones mínimo 48 px, uso con una mano, **máximo 3 toques para registrar una lectura en la ronda**.
+- **Cada patero guarda su orden habitual de secciones** (D17); la app lo usa para sugerir la siguiente
+  sección y para decidir cuál es la vecina al deslizar.
+
+## Formato oficial de temperaturas — filas, en orden
+`CONTENEDOR · UBICACIÓN · PRODUCTO · SELLO · ESTADO · HORA INGRESO · HORA SALIDA`,
+luego las 12 horas fijas (8:00 a. m. … 6:00 a. m.), luego `Mínimo · Máximo · Promedio`.
+**10 contenedores por hoja.** Leyenda: `C = Cargando · D = Despachado · E = En espera · SE = Sin energía · V = Vacío`.
+Abajo: Observaciones + bloques de turno día / turno noche con nombre y hora de entrega de turno.
+
+---
+
+## Stack — versiones verificadas en npm el 14-nov-2026
+| Pieza | Versión |
+|---|---|
+| React / React DOM | 19.3.1 |
+| Vite | 8.3.8 |
+| @vitejs/plugin-react | 6.3.0 |
+| TypeScript | 7.0.2 (compilador Go; si alguna herramienta falla, bajar a 6.0.3) |
+| Dexie | 4.4.7 |
+| vite-plugin-pwa | 2.0.0 |
+| @supabase/supabase-js | 2.119.0 |
+| Vitest | 5.1.0 |
+| Node en el contenedor | 22.23.4 |
+
+**Exportación .xlsx**: decidir en Fase 2 entre `exceljs` (más fiel al formato pero sin mantenimiento
+desde 2023) y `write-excel-file` 4.1.1 (mantenido).
+
+## Datos de ejemplo de la maqueta
+Tienen que cuadrar entre pantallas; se calculan en el navegador desde `_datos.json`, nunca a mano.
+52 ocupadas de 115, 7 en alerta, 7 en urgencia, 1 con código SE, 37 de 52 medidas en la ronda de las
+10:00. El reporte diario es el **día operativo cerrado del 13-nov**; las demás pantallas son el 14-nov
+con la ronda de las 10:00 a medio hacer, y eso se dice en la pantalla.
+
+## Regla de arquitectura
+Las pantallas **nunca** tocan Supabase ni IndexedDB directamente. Todo pasa por **una sola capa de datos**,
+para migrar después al PostgreSQL de la empresa sin tocar pantallas.
+La sincronización se basa en una tabla `eventos` que **solo agrega**, con identificador único generado
+en el teléfono.
+
+## iPhone — restricción conocida
+Safari borra datos de una web tras 7 días sin uso. **Las webs agregadas a la pantalla de inicio están
+exentas** (contador propio que se reinicia al abrirlas). La app pide `navigator.storage.persist()`
+en cada apertura y **obliga a instalar en pantalla de inicio en iPhone**. En Android es opcional.
+Verificar en equipo real en Fase 1.
+
+## Fases
+- **Fase 0** — Demo navegable sin servidor, 100 % en el teléfono, funciona en modo avión. Patio, llegada,
+  ronda, mover, salida, búsqueda y reporte diario con el formato oficial. Datos ficticios con dígito
+  verificador válido.
+- **Fase 1** — Supabase, activación de teléfonos, PIN, sincronización y conflictos. Probado en Android e iPhone.
+- **Fase 2** — Historial, correcciones, verificación de turno, resto de reportes, .xlsx, Power Query,
+  importación de lista esperada.
+- **Fase 3** — Alertas, panel del supervisor, documento de migración al servidor de la empresa.
+
+## Pruebas automáticas obligatorias
+ISO 6346 · día operativo y corte de las 07:00 · asignación de lecturas a su hora fija (atrasadas y no
+realizadas) · mínimo/máximo/promedio ignorando códigos · tiempo en patio con movimientos · sincronización
+y conflictos.
+
+## Repositorio
+Público. **Ni un dato real ni una clave secreta.** Modo demo con datos ficticios.

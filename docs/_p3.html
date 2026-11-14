@@ -1,0 +1,92 @@
+<header class="cab">
+  <div class="cab-in">
+    <img class="logo" src="__LOGO__" alt="Total Seafood">
+    <div class="cab-tit"><b>Patio en Vivo</b><span>Propuesta de pantallas · v2</span></div>
+    <button class="btn-tema" id="tema" type="button"><span id="tema-ic">☾</span><span id="tema-tx">Turno noche</span></button>
+  </div>
+  <nav class="pest" id="pest" role="tablist">
+    <button role="tab" aria-selected="true" data-p="tel">1 · Patio en el teléfono</button>
+    <button role="tab" aria-selected="false" data-p="pc">2 · Patio en PC</button>
+    <button role="tab" aria-selected="false" data-p="llegada">3 · Llegada</button>
+    <button role="tab" aria-selected="false" data-p="ronda">4 · Ronda</button>
+    <button role="tab" aria-selected="false" data-p="detalle">5 · Detalle</button>
+    <button role="tab" aria-selected="false" data-p="buscar">6 · Buscar</button>
+    <button role="tab" aria-selected="false" data-p="reporte">7 · Reporte diario</button>
+  </nav>
+</header>
+
+<main>
+  <div class="intro">
+    <h1>La hoja de patio, viva</h1>
+    <p>Siete pantallas con los mismos datos de ejemplo: 52 posiciones ocupadas de 115, la ronda de las 10:00 a medio hacer. Los números de contenedor son reales en formato ISO 6346. Toca <b>Turno noche</b> arriba a la derecha para el modo oscuro, y prueba el mini-plano: es interactivo.</p>
+  </div>
+
+  <!-- 1 · PATIO EN EL TELÉFONO -->
+  <section id="p-tel" class="panel">
+    <div class="tel">
+      <div class="tel-cab"><div class="tel-cab-fila"><b>Patio</b><span class="sinc"><i></i>3 pendientes · 10:42</span></div></div>
+      <div class="tel-cuerpo">
+        <div class="res" id="res-tel"></div>
+        <div class="mini-caja">
+          <div class="mini-top"><b>Plano del patio</b><span id="mini-sub">Toca una sección</span></div>
+          <div class="mini" id="mini-tel"></div>
+          <div class="mini-ley">
+            <span><i style="background:var(--ok-pl)"></i>Correcto</span>
+            <span><i style="background:var(--avi-pl)"></i>Urgencia</span>
+            <span><i style="background:var(--ale-pl)"></i>Alerta</span>
+            <span><i style="background:var(--nul-pl)"></i>Sin lectura</span>
+            <span><i style="background:var(--libre-pl)"></i>Libre</span>
+          </div>
+        </div>
+        <div class="filtros" id="filtros-tel">
+          <button type="button" data-f="alertas" aria-pressed="false">▲ Solo alertas</button>
+          <button type="button" data-f="pendientes" aria-pressed="false">◷ Sin tomar en esta ronda</button>
+        </div>
+        <div class="sec-cab">
+          <b id="sec-nom">Sector C</b>
+          <div class="nav-sec"><button type="button" id="ant-sec" aria-label="Sección anterior">‹</button><button type="button" id="sig-sec" aria-label="Sección siguiente">›</button></div>
+        </div>
+        <div class="lista" id="lista-tel"></div>
+      </div>
+      <div class="tel-pie">
+        <div class="on"><em>▦</em>Patio</div><div><em>＋</em>Llegada</div>
+        <div><em>◷</em>Ronda</div><div><em>⌕</em>Buscar</div><div><em>▤</em>Reportes</div>
+      </div>
+    </div>
+    <div class="notas">
+      <div><h2>Pantalla 1 · El patio en el teléfono</h2><p>El mini-plano manda. Es interactivo: toca cualquier sección.</p></div>
+      <div class="nota nuevo"><b>Mini-plano fijo arriba, con las 115 posiciones</b><p>Cada posición es un cuadrito de color, sin texto. Los siete bloques están puestos como en la hoja: E1 y E2 a la izquierda, después Sector C, Sector B con Oficina debajo, Sector A y Patio Nuevo.</p><p>Las zonas largas se parten en varias columnitas para que las 115 quepan arriba sin ocupar media pantalla. El orden dentro de cada zona sigue siendo de arriba hacia abajo.</p></div>
+      <div class="nota nuevo"><b>Tocar una sección la abre debajo</b><p>Queda resaltada en azul en el mini-plano: <b>estás aquí</b>. Abajo salen sus posiciones con contenedor, temperatura y hora. Las flechas ‹ › pasan a la sección vecina, y en el celular también se desliza con el dedo.</p></div>
+      <div class="nota nuevo"><b>Los dos filtros</b><p><b>Solo alertas</b> deja a la vista nada más lo que está fuera de rango. <b>Sin tomar en esta ronda</b> muestra lo que falta medir, marcado con la etiqueta «Sin tomar». Funcionan en el teléfono y en la PC.</p></div>
+      <div class="nota"><b>Zoom con los dedos: solo para consultar</b><p>Con el teléfono en horizontal se abre la hoja completa, igual que en la PC, y ahí sí se hace zoom con dos dedos. Es vista de consulta: para trabajar se usa el mini-plano, que no se mueve.</p></div>
+      <div class="leyenda">
+        <span class="l-ok">✓ Correcto · −18 o más frío</span>
+        <span class="l-avi">! Urgencia · −18 a −15</span>
+        <span class="l-ale">▲ Alerta · más caliente que −15</span>
+        <span class="l-nul">SE Sin lectura</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · PATIO EN PC -->
+  <section id="p-pc" class="panel-ancho" hidden>
+    <div class="notas" style="max-width:none;margin-bottom:16px">
+      <div><h2>Pantalla 2 · El patio en PC o tablet</h2>
+      <p>La hoja de patio completa, con las siete tablas en el mismo lugar que el papel. Pensada para dejarla abierta en una pantalla de la oficina: se actualiza sola, sin que nadie toque nada.</p></div>
+    </div>
+    <div class="pc-barra">
+      <div class="pc-res" id="res-pc"></div>
+      <div class="filtros" id="filtros-pc">
+        <button type="button" data-f="alertas" aria-pressed="false">▲ Solo alertas</button>
+        <button type="button" data-f="pendientes" aria-pressed="false">◷ Sin tomar en esta ronda</button>
+      </div>
+      <span class="vivo"><i></i>En vivo · actualizado 10:42</span>
+    </div>
+    <div class="plano-env"><div class="plano" id="plano-pc"></div></div>
+    <div class="notas" style="max-width:none;margin-top:16px">
+      <div class="nota nuevo"><b>Misma disposición del PDF modelo</b><p>Cámara 1 y 2 con Cámara 3 y 4 en la primera columna, luego Sector C, Sector B con Oficina debajo, Sector A y Patio Nuevo. Los números son los del papel: E2 va de 6 a 11.</p></div>
+      <div class="nota nuevo"><b>Cada fila trae lo que antes se anotaba a mano, y dos cosas más</b><p>Contenedor, temperatura con su color y la hora de esa toma. En el papel solo iba el contenedor.</p></div>
+      <div class="nota"><b>Para dejarla puesta en la oficina</b><p>El punto verde «En vivo» muestra la hora de la última actualización. Mientras no haya WiFi en el patio, «en vivo» significa lo último que sincronizó cada patero. El día que haya WiFi allá, esto pasa a tiempo real sin rehacer nada.</p></div>
+      <div class="nota"><b>Las filas fuera de rango se tiñen</b><p>No hay que buscarlas: saltan a la vista desde lejos, que es la idea de tenerla en una pantalla de la oficina.</p></div>
+    </div>
+  </section>
