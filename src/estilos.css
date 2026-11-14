@@ -94,7 +94,7 @@ p{margin:0}
 .cua.late{animation:late 1s ease-in-out infinite;outline:2px solid var(--acento);outline-offset:1px}
 @keyframes late{0%,100%{opacity:1}50%{opacity:.2}}
 @media (prefers-reduced-motion:reduce){.cua.late{animation:none}}
-.ley{display:flex;flex-wrap:nowrap;gap:0 7px;margin-top:4px;justify-content:center;overflow:hidden}
+.ley{display:flex;flex-wrap:wrap;gap:1px 7px;margin-top:4px;justify-content:center}
 .ley span{display:inline-flex;align-items:center;gap:3px;font-size:8.5px;color:var(--tinta2);font-weight:600;white-space:nowrap}
 .ley i{width:8px;height:8px;border-radius:2px;display:block;flex:none}
 
@@ -434,3 +434,6 @@ tr.calc td{font-weight:700;background:var(--sup2)}
 .graf .pt-hueco{fill:var(--sup);stroke:var(--tinta3);stroke-width:1.5;stroke-dasharray:2 2}
 .graf .pt-cod{fill:var(--nul-pl)}
 .graf .val-correcto{fill:var(--ok)} .graf .val-urgencia{fill:var(--avi)} .graf .val-alerta{fill:var(--ale)}
+
+.reinicia{border:1px dashed var(--borde);background:none;color:var(--tinta3);border-radius:8px;
+  padding:9px;font-size:11px;font-weight:600;margin-top:4px;flex:none}

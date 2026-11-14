@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { pendientesDeEnvio, usuario as leerUsuario, vistaPatio, zonas as leerZonas } from "../datos/repo";
-import { reiniciarDemo } from "../datos/semilla";
 import { Patio } from "./Patio";
 import { PlanoPC } from "./PlanoPC";
 import { Llegada } from "./Llegada";
@@ -141,14 +140,6 @@ export function App() {
         </div>
       )}
 
-      {ancho && pantalla === "patio" && (
-        <button type="button"
-          style={{ position: "fixed", bottom: 10, right: 12, fontSize: 11, border: "1px solid var(--borde)",
-                   background: "var(--sup)", borderRadius: 999, padding: "5px 11px", color: "var(--tinta3)" }}
-          onClick={() => { if (confirm("¿Volver a generar los datos de demostración?")) void reiniciarDemo(); }}>
-          Reiniciar demo
-        </button>
-      )}
     </div>
   );
 }
