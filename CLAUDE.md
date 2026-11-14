@@ -53,9 +53,19 @@ Documento maestro del plan: `PLAN.md`. Formatos originales en `docs/formatos/`.
 | D24 | **Tipografías del sistema, sin descargas externas.** Nada de Google Fonts: la página abre sin señal desde la primera vez y la carga inicial es mínima. | 14-nov |
 
 ## Estado
-**Fase 0 construida y probada** (14-nov). 46 pruebas automáticas en verde; sin desbordes ni
-errores de consola en 360×640 ni en 1366×768. Falta publicarla: el repositorio todavía no existe
-en GitHub y esta sesión no puede crearlo.
+**Fase 0 construida, probada y subida** (14-nov). 46 pruebas automáticas en verde; sin desbordes ni
+errores de consola en 360×640 ni en 1366×768. El código está en
+https://github.com/EdisonDavid3/patio-en-vivo (público, rama `main`).
+
+**Falta un ajuste manual para que la página salga publicada:** en *Settings → Pages*, el origen
+(*Source*) debe ser **GitHub Actions**, no «Deploy from a branch». Con «branch» GitHub publica el
+código tal cual y la página sale en blanco. Esta sesión no puede cambiarlo: la API de Pages está
+bloqueada por el proxy (`/repos/{owner}/{repo}/pages`, HTTP 403), igual que la creación de
+repositorios. Lo tiene que tocar Edison una sola vez.
+
+Una vez puesto en GitHub Actions, `.github/workflows/publicar.yml` publica solo en cada push a
+`main`: instala, corre las 46 pruebas, construye con `BASE_PATH=/patio-en-vivo/` y despliega.
+URL final: https://edisondavid3.github.io/patio-en-vivo/
 
 ## Entregables
 - `PLAN.md` — plan aprobado.
@@ -81,7 +91,8 @@ Las posiciones **se ordenan por zona y número**, nunca por el orden de IndexedD
 C-1, C-10, C-11, C-2...). Hay una prueba que lo vigila.
 
 ## Pendiente de Edison
-- [ ] Nombre del repositorio (sugerido: `patio-en-vivo`).
+- [x] ~~Nombre del repositorio~~ → `EdisonDavid3/patio-en-vivo`, creado y con el código subido.
+- [ ] **Settings → Pages → Source = GitHub Actions** (un solo clic, sin esto la página sale en blanco).
 - [ ] Lista real de opciones de **Producto** y de **Estado**.
 - [ ] Nombres de los pateros y quién es supervisor.
 - [ ] Un Android y un iPhone reales para probar (Fase 1).

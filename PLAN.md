@@ -460,8 +460,10 @@ solo y tiene modo pantalla completa; el detalle muestra la fecha de ingreso.
 2. Las posiciones salían ordenadas como texto (C 1, C 10, C 11, C 2…) porque así las devuelve
    IndexedDB. Ahora van por zona y número, con una prueba que lo vigila.
 
-**Lo que falta para que la abras en el teléfono:** crear el repositorio en GitHub. Esta sesión
-puede escribir en repositorios que ya existen, pero no crearlos.
+**Subida a GitHub:** el código está en https://github.com/EdisonDavid3/patio-en-vivo.
+Falta un solo ajuste, que esta sesión no puede hacer porque la API de Pages está bloqueada:
+en *Settings → Pages*, poner el origen en **GitHub Actions** en vez de «Deploy from a branch».
+Con «branch» GitHub publica el código fuente tal cual y la página sale en blanco.
 
 ## 13. Qué pasa cuando apruebes
 
