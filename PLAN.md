@@ -437,6 +437,32 @@ Al cerrar cada fase te digo exactamente **qué probar y cómo**, paso a paso.
 
 ---
 
+## 12.bis Estado de la Fase 0 (14-nov)
+
+**Construida y probada.** Lo que quedó hecho:
+
+| | |
+|---|---|
+| Dominio probado | ISO 6346, día operativo con corte a las 07:00, asignación de lecturas a su hora fija, rangos, mínimo/máximo/promedio, tiempo en patio con movimientos. **46 pruebas en verde.** |
+| Capa de datos | Una sola (`src/datos/repo.ts`), sobre IndexedDB con Dexie. Las pantallas no la saltan nunca. |
+| Pantallas | Patio (teléfono y PC), Llegada, Ronda, Detalle, Buscar y Reporte diario. |
+| Sin conexión | Service worker con todo en caché, `navigator.storage.persist()` en cada apertura, tipografías del sistema (ninguna descarga externa). |
+| Probado | 360×640 y 1366×768: sin desbordes, sin errores de consola, la ronda entera sin deslizar, 5 filas visibles al abrir una sección, el plano de PC completo en pantalla. |
+
+**Correcciones de la segunda revisión, ya aplicadas:** la ronda cabe en una pantalla pequeña;
+el mini-plano baja a un cuarto de la pantalla y se encoge al deslizar; el plano de PC se ajusta
+solo y tiene modo pantalla completa; el detalle muestra la fecha de ingreso.
+
+**Dos fallos que encontré yo al probar y corregí:**
+1. Una lectura tomada a las 03:23 se guardaba en la hora fija de las 04:00 (la más cercana) en
+   vez de la ronda de las 02:00 que el patero tiene abierta. Ahora manda la ronda abierta, y una
+   lectura suelta nunca cae en una hora que no ha llegado.
+2. Las posiciones salían ordenadas como texto (C 1, C 10, C 11, C 2…) porque así las devuelve
+   IndexedDB. Ahora van por zona y número, con una prueba que lo vigila.
+
+**Lo que falta para que la abras en el teléfono:** crear el repositorio en GitHub. Esta sesión
+puede escribir en repositorios que ya existen, pero no crearlos.
+
 ## 13. Qué pasa cuando apruebes
 
 1. Creo `CLAUDE.md` con estas decisiones, para no perder el hilo entre sesiones.

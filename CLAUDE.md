@@ -45,6 +45,17 @@ Documento maestro del plan: `PLAN.md`. Formatos originales en `docs/formatos/`.
 | D16 | **Ronda: se muestra la lectura anterior** (valor y hora), hay **botón para volver a la posición anterior**, y el mini-plano marca medidas y pendientes. | 14-nov |
 | D17 | **Orden de la ronda sin pantalla de configuración**: el patero empieza tocando la sección donde está; dentro va ascendente con botón «Empezar por el final»; al terminar, la app sugiere la siguiente pendiente con un botón grande pero puede tocar cualquier otra; **la app recuerda el orden habitual de cada patero** (preferencia guardada en `usuarios`) y lo usa para sugerir y para el deslizar. | 14-nov |
 | D18 | **Pantallas nuevas**: detalle de posición (Mover / Salida / Corregir / Historial) y Buscar por los últimos dígitos, con parpadeo del cuadrito en el plano y scroll automático a la fila. | 14-nov |
+| D19 | **La ronda cabe entera en 360×640 sin deslizar.** El mini-plano va plegado en una tira fina con botón «Ver plano». La sugerencia «Seguir con…» aparece solo al terminar una sección; «Empezar por el final», solo al iniciarla. | 14-nov |
+| D20 | **Mini-plano del teléfono ≈ 25 % de la pantalla**, contadores en una sola línea, el plano se encoge al deslizar la lista. Al abrir una sección se ven 5 filas completas (8 al deslizar). | 14-nov |
+| D21 | **El plano de PC entra entero en 1366×768**, con ajuste automático de escala, más un **modo pantalla completa** para dejarlo puesto en la oficina. | 14-nov |
+| D22 | **El detalle muestra la fecha junto a la hora de ingreso.** | 14-nov |
+| D23 | **Una lectura guardada desde la ronda pertenece a la ronda abierta**, no a la hora fija más cercana. Una lectura suelta (una llegada) nunca se guarda en una hora fija que todavía no ha llegado. | 14-nov |
+| D24 | **Tipografías del sistema, sin descargas externas.** Nada de Google Fonts: la página abre sin señal desde la primera vez y la carga inicial es mínima. | 14-nov |
+
+## Estado
+**Fase 0 construida y probada** (14-nov). 46 pruebas automáticas en verde; sin desbordes ni
+errores de consola en 360×640 ni en 1366×768. Falta publicarla: el repositorio todavía no existe
+en GitHub y esta sesión no puede crearlo.
 
 ## Entregables
 - `PLAN.md` — plan aprobado.
@@ -54,6 +65,20 @@ Documento maestro del plan: `PLAN.md`. Formatos originales en `docs/formatos/`.
   Se arma con `docs/_p1..._p7.html` + `docs/_datos.json`; el ensamblado concatena las partes y
   sustituye `/*__DATOS__*/` y `__LOGO__`.
 - `docs/formatos/` — los dos PDF oficiales y el logo.
+- Código de la Fase 0: `src/dominio/` (lógica pura probada), `src/datos/` (la única capa de datos),
+  `src/ui/` (pantallas). Pruebas junto al código, en `*.test.ts`.
+
+## Cómo trabajar el código
+```
+npm install && npm run dev     # desarrollo
+npm test                       # 46 pruebas
+npm run tipos                  # revisión de tipos
+BASE_PATH=/patio-en-vivo/ npm run build
+```
+La hoja de patio se dibuja desde `src/datos/zonas.ts`: `colsTel` reparte cada zona en columnitas
+para el mini-plano del teléfono y `COLS_PC` para el plano de PC. Cambiarlos no toca ninguna pantalla.
+Las posiciones **se ordenan por zona y número**, nunca por el orden de IndexedDB (que es alfabético:
+C-1, C-10, C-11, C-2...). Hay una prueba que lo vigila.
 
 ## Pendiente de Edison
 - [ ] Nombre del repositorio (sugerido: `patio-en-vivo`).
