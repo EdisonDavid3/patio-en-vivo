@@ -60,6 +60,8 @@ Documento maestro del plan: `PLAN.md`. Formatos originales en `docs/formatos/`.
 | D31 | **Plano de PC**: una zona partida en dos columnas muestra su rango en cada título («SECTOR B (1–10)», «SECTOR B (11–20)»). | 14-nov |
 | D32 | **El color del cuadrito responde «¿hay que preocuparse?»**: solo *con producto* usa verde/amarillo/rojo. *Vacío* gris, *enfriando* turquesa, *cargando* violeta, *libre* gris claro. Así un cuadrito rojo siempre es una alerta de verdad. | 14-nov |
 | D33 | **Las etapas son casi exactamente los códigos del formato oficial**: vacío=**V**, cargando=**C**, con producto=**E**, despachado=**D**. **«Enfriando» no tiene código en la norma** (ver sección «Etapas y el formato oficial»). *SE* no es una etapa: es el motivo de una toma fallida. | 14-nov |
+| D34 | **La hoja oficial lleva solo los contenedores que se miden** (enfriando, cargando, con producto). Los vacíos no salen: no tendrían nada que registrar. Si hace falta, su cantidad va en una línea del pie. | 14-nov |
+| D35 | **Las lecturas de «enfriando» no se encierran en rojo**: en esa etapa la temperatura es información, no incumplimiento. Salen con su número normal y se anota «en enfriamiento» en Observaciones. | 14-nov |
 
 ## Estado
 **Fase 0 construida, probada y subida** (14-nov). 46 pruebas automáticas en verde; sin desbordes ni
@@ -106,12 +108,13 @@ Cuatro de las cinco etapas **ya son** esos códigos:
 `SE` no es una etapa: es el motivo que se anota **en la celda de una toma** cuando no se pudo medir.
 Una prueba (`src/dominio/etapas.test.ts`) vigila esta correspondencia.
 
-**Pendiente de decidir con Edison** (cambia el reporte oficial):
-1. ¿Qué contenedores salen en la hoja: todos, solo los que se miden, o solo los que ya tienen producto?
-2. ¿Cómo se marca «Enfriando» en la fila ESTADO? Recomendación: **V**, porque físicamente sigue vacío
-   y así la hoja no estrena una letra que la jefa no conoce.
-3. Las lecturas de *enfriando* y *cargando* no deben salir encerradas en rojo: en esas etapas la
-   temperatura es información, no incumplimiento.
+**Decidido el 14-nov:**
+1. La hoja lleva **solo los contenedores que se miden** (D34). Los vacíos no salen.
+2. «Enfriando» se marca **V** en la fila ESTADO: físicamente sigue vacío y la hoja no estrena una
+   letra que la jefa no conoce. Si algún día se quiere distinguir, sería **EF** y hay que sumarlo a
+   la leyenda del documento, lo cual aprueba la jefa.
+3. Las lecturas de *enfriando* **no se encierran en rojo** (D35); se anota «en enfriamiento» en
+   Observaciones. Las de *cargando* tampoco.
 
 ## Entregables
 - `PLAN.md` — plan aprobado.
@@ -139,7 +142,6 @@ C-1, C-10, C-11, C-2...). Hay una prueba que lo vigila.
 ## Pendiente de Edison
 - [x] ~~Nombre del repositorio~~ → `EdisonDavid3/patio-en-vivo`, creado y con el código subido.
 - [x] ~~Settings → Pages → Source = GitHub Actions~~ → hecho; la página está publicada.
-- [ ] **Decidir qué sale en la hoja oficial y cómo se marca «Enfriando»** (ver «Etapas y el formato oficial»).
 - [ ] Lista real de opciones de **Producto** y de **Estado**.
 - [ ] Nombres de los pateros y quién es supervisor.
 - [ ] Un Android y un iPhone reales para probar (Fase 1).
@@ -229,6 +231,8 @@ gráfico de línea (D30), títulos del plano de PC (D31), detalle con los botone
   pantalla. Temperatura, Producto, Sello, Estado y Nota **plegados** («+ Añadir temperatura»).
   La pantalla debe caber en 360×640: posición, número y «Registrar llegada».
 - **Reporte de tiempo en patio**: mostrar el tiempo por etapa (ya se guarda en `tramosEtapa`).
+- **Reporte oficial según D34 y D35**: filtrar a los contenedores que se miden, marcar «enfriando»
+  como **V** en ESTADO y no encerrar en rojo sus lecturas ni las de «cargando».
 
 ## Regla de arquitectura
 Las pantallas **nunca** tocan Supabase ni IndexedDB directamente. Todo pasa por **una sola capa de datos**,

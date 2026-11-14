@@ -486,12 +486,14 @@ Mientras enfría, la app muestra **cuánto le falta** para la temperatura ideal 
 
 ### Las etapas y el formato oficial
 Cuatro de las cinco **ya son** los códigos del papel (V, C, E, D). **«Enfriando» es la única que la
-norma no contempla.** Tres cosas por decidir con la jefa antes de tocar el reporte:
-1. ¿Qué contenedores salen en la hoja: todos, solo los que se miden, o solo los que tienen producto?
-2. ¿Cómo se marca «Enfriando» en la fila ESTADO? La recomendación es **V**, porque físicamente sigue
-   vacío y así la hoja no estrena una letra que la jefa no conoce.
-3. Las lecturas de enfriando y cargando **no** deben salir encerradas en rojo: ahí la temperatura es
-   información, no incumplimiento.
+norma no contempla.** Decidido el 14-nov:
+1. **La hoja lleva solo los contenedores que se miden**: enfriando, cargando y con producto. Los
+   vacíos no salen, porque no tendrían nada que registrar y solo ocuparían columnas en blanco.
+2. **«Enfriando» se marca V** en la fila ESTADO: físicamente sigue vacío, y así la hoja no estrena
+   una letra que la jefa no conoce. Si algún día se quiere distinguir sería **EF**, y eso significa
+   cambiar la leyenda de un documento controlado: lo aprueba la jefa.
+3. **Las lecturas de enfriando no se encierran en rojo**, ni las de cargando: en esas etapas la
+   temperatura es información, no incumplimiento. Se anota «en enfriamiento» en Observaciones.
 
 ### Salida
 Al reportarla, el contenedor **desaparece del patio en vivo de inmediato** y su posición queda libre.
