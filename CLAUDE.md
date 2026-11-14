@@ -57,15 +57,30 @@ Documento maestro del plan: `PLAN.md`. Formatos originales en `docs/formatos/`.
 errores de consola en 360×640 ni en 1366×768. El código está en
 https://github.com/EdisonDavid3/patio-en-vivo (público, rama `main`).
 
-**Falta un ajuste manual para que la página salga publicada:** en *Settings → Pages*, el origen
-(*Source*) debe ser **GitHub Actions**, no «Deploy from a branch». Con «branch» GitHub publica el
-código tal cual y la página sale en blanco. Esta sesión no puede cambiarlo: la API de Pages está
-bloqueada por el proxy (`/repos/{owner}/{repo}/pages`, HTTP 403), igual que la creación de
-repositorios. Lo tiene que tocar Edison una sola vez.
+**Publicada en https://edisondavid3.github.io/patio-en-vivo/** (14-nov).
+`.github/workflows/publicar.yml` despliega solo en cada push a `main`: instala, corre las 46
+pruebas y, solo si pasan, construye con `BASE_PATH=/patio-en-vivo/` y publica.
 
-Una vez puesto en GitHub Actions, `.github/workflows/publicar.yml` publica solo en cada push a
-`main`: instala, corre las 46 pruebas, construye con `BASE_PATH=/patio-en-vivo/` y despliega.
-URL final: https://edisondavid3.github.io/patio-en-vivo/
+**Modo avión verificado** sobre los archivos construidos, servidos en `/patio-en-vivo/`:
+el service worker se instala; al cortar la red y recargar, la app abre completa (115 posiciones);
+se pueden registrar llegadas y lecturas de ronda sin red; el reporte oficial se arma sin red;
+y al cerrar y volver a abrir sin red todo sigue ahí. Cero errores de consola.
+`navigator.storage.persisted()` devolvió `false` en el navegador de prueba (es lo esperado en uno
+automatizado): **queda por comprobar en un iPhone real**.
+
+### Dos cosas que esta sesión NO puede hacer con GitHub
+El proxy bloquea estas rutas de la API con HTTP 403, así que las tiene que hacer Edison a mano:
+- Crear repositorios (`POST /user/repos`).
+- Leer o cambiar los ajustes de Pages (`/repos/{owner}/{repo}/pages`). **Ojo:** si Pages queda en
+  «Deploy from a branch», GitHub publica el código fuente tal cual y la página sale en blanco;
+  tiene que estar en **GitHub Actions**.
+Tampoco se puede abrir `edisondavid3.github.io` desde la sesión (el proxy lo rechaza), ni descargar
+el artefacto desplegado (vive en `blob.core.windows.net`, también bloqueado). Para verificar un
+despliegue: `gh api repos/EdisonDavid3/patio-en-vivo/deployments/{id}/statuses`.
+
+### El contador de pendientes en la Fase 0
+Cuenta los eventos sin enviar. **Sube y no baja, y eso es correcto**: no hay servidor hasta la
+Fase 1. Lo que sí debe refrescarse al instante es el patio y el avance de la ronda.
 
 ## Entregables
 - `PLAN.md` — plan aprobado.
@@ -92,7 +107,7 @@ C-1, C-10, C-11, C-2...). Hay una prueba que lo vigila.
 
 ## Pendiente de Edison
 - [x] ~~Nombre del repositorio~~ → `EdisonDavid3/patio-en-vivo`, creado y con el código subido.
-- [ ] **Settings → Pages → Source = GitHub Actions** (un solo clic, sin esto la página sale en blanco).
+- [x] ~~Settings → Pages → Source = GitHub Actions~~ → hecho; la página está publicada.
 - [ ] Lista real de opciones de **Producto** y de **Estado**.
 - [ ] Nombres de los pateros y quién es supervisor.
 - [ ] Un Android y un iPhone reales para probar (Fase 1).
