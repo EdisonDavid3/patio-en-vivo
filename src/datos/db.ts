@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
-import type { Zona, Posicion, Contenedor, Estadia, Ubicacion, Lectura, Usuario, Evento, Ajuste, TramoEtapa } from "./tipos";
+import type { Zona, Posicion, Contenedor, Estadia, Ubicacion, Lectura, Usuario, Evento, Ajuste, TramoEtapa, Verificacion } from "./tipos";
 
 export class BaseLocal extends Dexie {
   zonas!: EntityTable<Zona, "id">;
@@ -8,6 +8,7 @@ export class BaseLocal extends Dexie {
   estadias!: EntityTable<Estadia, "id">;
   ubicaciones!: EntityTable<Ubicacion, "id">;
   tramosEtapa!: EntityTable<TramoEtapa, "id">;
+  verificaciones!: EntityTable<Verificacion, "id">;
   lecturas!: EntityTable<Lectura, "id">;
   usuarios!: EntityTable<Usuario, "id">;
   eventos!: EntityTable<Evento, "id">;
@@ -32,6 +33,16 @@ export class BaseLocal extends Dexie {
     }).upgrade(async (tx) => {
       await tx.table("estadias").toCollection().modify((e: Estadia) => {
         if (!e.etapa) e.etapa = "con_producto";
+      });
+    });
+    // v3: usuarios con rol y PIN, y verificación de turno
+    this.version(3).stores({
+      usuarios: "id, rol, activo",
+      verificaciones: "id, [dia+turno], zonaId, ms",
+    }).upgrade(async (tx) => {
+      await tx.table("usuarios").toCollection().modify((u: Record<string, unknown>) => {
+        if (u.rol === "supervisor") u.rol = "administrador";
+        if (!u.rol) u.rol = "patero";
       });
     });
   }

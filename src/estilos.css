@@ -616,3 +616,105 @@ tr.calc td{font-weight:700;background:var(--sup2)}
 .f-pos{white-space:normal}
 .f-sin{color:var(--acento-tinta);font-weight:700;margin-left:6px}
 .f-revisar{color:var(--ale);font-weight:700;margin-left:6px}
+
+/* ---------- arrastrar en el plano (solo administrador) ---------- */
+.pc-plano.arrastrable tr[data-libre="no"]{cursor:grab}
+.pc-plano.arrastrando{cursor:grabbing;user-select:none}
+.pc-plano.arrastrando tr{cursor:grabbing}
+tr.destino-si td{background:var(--ok-sup)!important;box-shadow:inset 0 0 0 2px var(--ok)}
+tr.destino-no td{background:var(--ale-sup)!important;box-shadow:inset 0 0 0 2px var(--ale)}
+.arrastre{position:fixed;z-index:85;pointer-events:none;background:var(--acento-btn);color:#fff;
+  border-radius:9px;padding:7px 11px;font-size:12.5px;font-weight:700;font-family:var(--mono);
+  box-shadow:0 10px 26px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:2px}
+.arrastre i{font-style:normal;font-family:var(--sans);font-size:10px;font-weight:600;opacity:.85}
+
+/* ---------- entrada ---------- */
+.entrada{display:flex;flex-direction:column;gap:10px;max-width:420px;margin:0 auto;width:100%;padding-top:8px}
+.entrada-cab{text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;margin-bottom:4px}
+.entrada-cab h1{font-size:21px}
+.entrada-cab p{font-size:12.5px;color:var(--tinta2)}
+.entrada-logo{font-size:38px;line-height:1}
+.entrada-input{width:100%;background:var(--sup2);color:var(--tinta);border:1.5px solid var(--borde);
+  border-radius:9px;padding:11px;min-height:50px;font:inherit;font-size:16px}
+.entrada-input:focus{outline:2px solid var(--acento);outline-offset:1px;border-color:var(--acento)}
+.entrada-lista{display:flex;flex-direction:column;gap:7px}
+.entrada-u{display:flex;align-items:center;gap:11px;background:var(--sup);border:1px solid var(--borde);
+  border-radius:10px;padding:11px;text-align:left;min-height:62px;width:100%}
+.entrada-u:hover{border-color:var(--acento)}
+.entrada-u b{display:block;font-size:15px}
+.entrada-ini{width:38px;height:38px;border-radius:50%;background:var(--acento-sup);color:var(--acento-tinta);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;flex:none}
+.entrada-ini.grande{width:54px;height:54px;font-size:24px}
+.pin-puntos{display:flex;gap:9px;justify-content:center;margin:6px 0 10px}
+.pin-puntos i{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--borde);display:block}
+.pin-puntos i.lleno{background:var(--acento);border-color:var(--acento)}
+
+/* ---------- usuarios ---------- */
+.roles-ayuda{display:flex;flex-direction:column;gap:7px}
+.roles-ayuda p{font-size:12px;color:var(--tinta2);margin-top:2px}
+.u-lista{display:flex;flex-direction:column;gap:6px}
+.u-fila{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:9px;align-items:center;
+  background:var(--sup2);border:1px solid var(--borde);border-radius:9px;padding:8px 10px}
+.u-fila.baja{opacity:.5}
+.u-med{min-width:0}
+.u-med b{font-size:14px;display:flex;align-items:center;gap:6px}
+.u-yo{font-size:9px;font-weight:700;background:var(--acento-sup);color:var(--acento-tinta);
+  border-radius:4px;padding:1px 5px;text-transform:uppercase}
+.u-sub{display:block;font-size:10.5px;color:var(--tinta3);font-weight:600}
+.u-acc{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.u-acc select,.u-acc button{background:var(--sup);border:1px solid var(--borde);border-radius:7px;
+  padding:5px 9px;font-size:11px;font-weight:650;color:var(--tinta2);min-height:34px}
+.u-acc button:disabled{opacity:.4}
+.qr-caja{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.qr{background:#fff;padding:8px;border-radius:9px;border:1px solid var(--borde);flex:none;line-height:0}
+.qr svg{width:150px;height:150px;display:block}
+.qr-url{display:block;font-family:var(--mono);font-size:12px;background:var(--sup2);border:1px solid var(--borde);
+  border-radius:7px;padding:7px 9px;word-break:break-all;margin:4px 0}
+
+/* ---------- movimientos ---------- */
+.movs{flex:none;margin-top:4px}
+.movs-lista{display:flex;flex-direction:column;gap:2px;margin-top:5px;max-height:260px;overflow-y:auto}
+.mov{display:grid;grid-template-columns:72px minmax(0,1fr);gap:8px;align-items:baseline;
+  padding:5px 8px;background:var(--sup);border-radius:6px;font-size:11.5px}
+.mov-hora{color:var(--tinta3);font-variant-numeric:tabular-nums;font-size:10px;font-weight:650}
+.mov-hora i{display:block;font-style:normal;opacity:.7}
+.mov-txt{color:var(--tinta2)}
+.mov-txt b{color:var(--tinta)}
+
+/* ---------- verificación de turno ---------- */
+.t-cab{display:flex;align-items:center;gap:10px;flex:none}
+.t-cab b{font-size:16px}
+.t-cab span{display:block;font-size:11px;color:var(--tinta3)}
+.t-atras{background:var(--sup);border:1px solid var(--borde);border-radius:8px;width:34px;height:34px;font-size:16px}
+.t-sec,.t-fila{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:9px;align-items:center;
+  background:var(--sup);border:1px solid var(--borde);border-left:4px solid var(--libre-pl);
+  border-radius:8px;padding:8px 10px;min-height:52px;text-align:left;width:100%}
+.t-sec.ok{border-left-color:var(--ok)}
+.t-fila.correcto{border-left-color:var(--ok-pl)} .t-fila.urgencia{border-left-color:var(--avi-pl)}
+.t-fila.alerta{border-left-color:var(--ale-pl)} .t-fila.enfriando{border-left-color:var(--frio-pl)}
+.t-fila.cargando{border-left-color:var(--carga-pl)} .t-fila.vacio{border-left-color:var(--vacio-pl)}
+.t-fila.dudosa{background:var(--ale-sup);border-color:var(--ale)}
+.t-tic{font-size:16px;font-weight:700;color:var(--tinta3);width:22px;text-align:center}
+.t-sec.ok .t-tic{color:var(--ok)}
+.t-marca{width:38px;height:38px;border-radius:8px;border:1px solid var(--borde);background:var(--sup2);
+  font-size:15px;font-weight:700;color:var(--ok);flex:none}
+.t-fila.dudosa .t-marca{color:var(--ale);border-color:var(--ale);background:var(--sup)}
+.t-med{min-width:0;text-align:left;background:none;border:0;padding:0}
+.t-sub{display:block;font-size:10px;color:var(--tinta3);font-weight:650;margin-top:1px}
+.t-libre{font-size:13px;color:var(--tinta3)}
+.t-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--tinta2);white-space:nowrap}
+.t-est{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tinta3)}
+.t-sec.ok .t-est{color:var(--ok)}
+
+/* ---------- aviso de ronda ---------- */
+.aviso-ronda{flex:none;display:flex;align-items:center;gap:8px;background:var(--avi-sup);
+  border-bottom:1px solid var(--avi-bor);padding:7px max(10px,env(safe-area-inset-left,0px));
+  font-size:12px;color:var(--avi);font-weight:700}
+.aviso-ronda span{margin-right:auto}
+.aviso-ronda button{border:1px solid var(--avi-bor);background:var(--sup);border-radius:999px;padding:5px 11px;
+  font-size:11.5px;font-weight:700;color:var(--avi);min-height:32px;white-space:nowrap}
+.aviso-ronda .si{background:var(--avi);border-color:var(--avi);color:#fff}
+.movs-chip{width:30px;height:30px;border-radius:7px;border:1px solid var(--borde);background:var(--sup);
+  font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center}
+.movs-chip:hover{border-color:var(--acento)}
+.hoja .movs-lista{max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:2px}

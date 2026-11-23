@@ -1,7 +1,8 @@
 import type { Codigo } from "../dominio/temperatura";
 import type { Etapa } from "../dominio/etapas";
 
-export type Rol = "patero" | "supervisor";
+export type { Rol } from "../dominio/permisos";
+import type { Rol } from "../dominio/permisos";
 
 export type Zona = {
   id: string;
@@ -71,6 +72,21 @@ export type Usuario = {
   /** D17: el orden de secciones que suele seguir en la ronda. */
   ordenSecciones: string[];
   activo: boolean;
+  /** PIN guardado como huella, nunca en claro. No es seguridad real hasta la Fase 1. */
+  sal: string;
+  huellaPin: string;
+  creadoMs: number;
+};
+
+/** D48: verificación de turno, una vez por turno y por sección. */
+export type Verificacion = {
+  id: string;
+  dia: string;
+  turno: "dia" | "noche";
+  zonaId: string;
+  usuarioId: string;
+  ms: number;
+  correcciones: number;
 };
 
 /** Registro que solo agrega: quién hizo qué y cuándo. Base de la sincronización futura. */

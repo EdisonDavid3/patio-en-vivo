@@ -8,18 +8,27 @@ import { ZONAS, TODAS_POSICIONES } from "./zonas";
 import type { Estadia, EstadoPosicion, Lectura, Posicion, Usuario, Zona } from "./tipos";
 import type { Codigo } from "../dominio/temperatura";
 import { entraEnRonda, ETAPAS, type Etapa } from "../dominio/etapas";
-import { diaOperativo, HORAS_FIJAS, ranuraParaGuardar, ranurasDelDia, VENTANA_MIN_POR_DEFECTO } from "../dominio/tiempo";
-import { normalizar } from "../dominio/iso6346";
+import { diaOperativo, HORAS_FIJAS, partes, ranuraParaGuardar, ranurasDelDia, VENTANA_MIN_POR_DEFECTO } from "../dominio/tiempo";
+import { formatear, normalizar } from "../dominio/iso6346";
+import { sesion } from "./usuarios";
 
 export const USUARIO_DEMO = "u-danilo";
 const DISPOSITIVO = "demo";
+
+/**
+ * Quién está firmando lo que se guarda. La App lo fija al abrir sesión, para que
+ * las escrituras no tengan que ir a buscarlo a la base en cada toque.
+ */
+let autor = USUARIO_DEMO;
+export function fijarAutor(usuarioId: string) { autor = usuarioId; }
+export function autorActual() { return autor; }
 
 const uid = () =>
   globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 async function anotar(tipo: string, carga: unknown) {
   await db.eventos.add({
-    id: uid(), tipo, carga, usuarioId: USUARIO_DEMO,
+    id: uid(), tipo, carga, usuarioId: autor,
     dispositivoId: DISPOSITIVO, creadoMs: Date.now(), enviadoMs: null,
   });
 }
@@ -166,7 +175,7 @@ async function guardarLecturaInterna(
   await db.lecturas.add({
     id: uid(), estadiaId, posicionId, numero, tomadaMs: ms,
     dia: a.dia, indice: a.indice, horaFija: a.horaFija,
-    c, codigo, atrasada: a.atrasada, usuarioId: USUARIO_DEMO, nota,
+    c, codigo, atrasada: a.atrasada, usuarioId: autor, nota,
   });
 }
 
@@ -180,7 +189,8 @@ export async function guardarLectura(args: {
       args.estadiaId, args.posicionId, args.numero,
       args.temperaturaC ?? null, args.codigo ?? null, ahora, args.nota ?? "", args.ranura,
     );
-    await anotar("lectura", { estadiaId: args.estadiaId, c: args.temperaturaC ?? null, codigo: args.codigo ?? null });
+    await anotar("lectura", { estadiaId: args.estadiaId, numero: args.numero, posicionId: args.posicionId,
+      c: args.temperaturaC ?? null, codigo: args.codigo ?? null });
   });
 }
 
@@ -188,11 +198,12 @@ export async function guardarLectura(args: {
 export async function mover(estadiaId: string, aPosicionId: string, ahora = Date.now()) {
   const ocupada = await db.ubicaciones.filter((u) => u.hasta === null && u.posicionId === aPosicionId).first();
   if (ocupada) return { ok: false as const, error: "Esa posición ya está ocupada." };
-  await db.transaction("rw", db.ubicaciones, db.eventos, async () => {
+  await db.transaction("rw", [db.ubicaciones, db.estadias, db.eventos], async () => {
     const actual = await db.ubicaciones.filter((u) => u.estadiaId === estadiaId && u.hasta === null).first();
     if (actual) await db.ubicaciones.update(actual.id, { hasta: ahora });
     await db.ubicaciones.add({ id: uid(), estadiaId, posicionId: aPosicionId, desde: ahora, hasta: null });
-    await anotar("mover", { estadiaId, de: actual?.posicionId ?? null, a: aPosicionId });
+    const est = await db.estadias.get(estadiaId);
+    await anotar("mover", { estadiaId, numero: est?.numero ?? null, de: actual?.posicionId ?? null, a: aPosicionId });
   });
   return { ok: true as const };
 }
@@ -209,7 +220,8 @@ export async function reportarSalida(estadiaId: string, ahora = Date.now()) {
     const actual = await db.ubicaciones.filter((u) => u.estadiaId === estadiaId && u.hasta === null).first();
     if (actual) await db.ubicaciones.update(actual.id, { hasta: ahora });
     await cerrarYAbrirTramo(estadiaId, "despachado", ahora);
-    await anotar("salida", { estadiaId, etapaAntes: antes?.etapa ?? null, posicion: actual?.posicionId ?? null });
+    await anotar("salida", { estadiaId, numero: antes?.numero ?? null, etapaAntes: antes?.etapa ?? null,
+      posicionId: actual?.posicionId ?? null });
   });
 }
 
@@ -247,12 +259,14 @@ async function cerrarYAbrirTramo(estadiaId: string, etapa: Etapa, ahora: number)
 }
 
 export async function cambiarEtapa(estadiaId: string, etapa: Etapa, ahora = Date.now()) {
-  await db.transaction("rw", [db.estadias, db.tramosEtapa, db.eventos], async () => {
+  await db.transaction("rw", [db.estadias, db.tramosEtapa, db.ubicaciones, db.eventos], async () => {
     const antes = await db.estadias.get(estadiaId);
     if (!antes || antes.etapa === etapa) return;
     await db.estadias.update(estadiaId, { etapa });
     await cerrarYAbrirTramo(estadiaId, etapa, ahora);
-    await anotar("cambio-etapa", { estadiaId, de: antes.etapa, a: etapa });
+    const donde = await db.ubicaciones.filter((u) => u.estadiaId === estadiaId && u.hasta === null).first();
+    await anotar("cambio-etapa", { estadiaId, numero: antes.numero, posicionId: donde?.posicionId ?? null,
+      de: antes.etapa, a: etapa });
   });
 }
 
@@ -306,7 +320,7 @@ export async function corregirEstadia(estadiaId: string, cambios: Partial<Estadi
   const antes = await db.estadias.get(estadiaId);
   await db.transaction("rw", db.estadias, db.eventos, async () => {
     await db.estadias.update(estadiaId, cambios);
-    await anotar("corregir-estadia", { estadiaId, antes, cambios });
+    await anotar("corregir-estadia", { estadiaId, numero: antes?.numero ?? null, antes, cambios });
   });
 }
 
@@ -314,7 +328,8 @@ export async function corregirLectura(lecturaId: string, c: number | null, codig
   const antes = await db.lecturas.get(lecturaId);
   await db.transaction("rw", db.lecturas, db.eventos, async () => {
     await db.lecturas.update(lecturaId, { c, codigo });
-    await anotar("corregir-lectura", { lecturaId, antes, c, codigo });
+    await anotar("corregir-lectura", { lecturaId, numero: antes?.numero ?? null,
+      posicionId: antes?.posicionId ?? null, antes, c, codigo });
   });
 }
 
@@ -344,16 +359,17 @@ export async function buscar(texto: string): Promise<Hallazgo[]> {
     .map((e) => ({ estadia: e, posicionId: posPorEstadia.get(e.id) ?? null, enPatio: e.salida === null }));
 }
 
-export async function usuario(): Promise<Usuario> {
-  const u = await db.usuarios.get(USUARIO_DEMO);
-  return u ?? { id: USUARIO_DEMO, nombre: "Danilo Zambrano", rol: "patero", ordenSecciones: [], activo: true };
+/** El usuario con la sesión abierta en este aparato. */
+export async function usuario(): Promise<Usuario | null> {
+  return sesion();
 }
 
 /** D17: la app recuerda el orden de secciones que suele seguir cada patero. */
 export async function recordarSeccion(zonaId: string) {
   const u = await usuario();
+  if (!u) return;
   const orden = [zonaId, ...u.ordenSecciones.filter((z) => z !== zonaId)].slice(0, 7);
-  await db.usuarios.put({ ...u, ordenSecciones: orden });
+  await db.usuarios.update(u.id, { ordenSecciones: orden });
 }
 
 export async function pendientesDeEnvio(): Promise<number> {
@@ -364,6 +380,7 @@ export async function pendientesDeEnvio(): Promise<number> {
 
 import type { Celda } from "../dominio/calculos";
 import { resumen } from "../dominio/calculos";
+import { formatearC } from "../dominio/temperatura";
 
 export type FilaReporte = {
   estadiaId: string;
@@ -494,7 +511,7 @@ export async function armarReporte(dia: string): Promise<Reporte> {
     dia,
     filas,
     observaciones: observaciones.slice(0, 8),
-    responsables: { dia: u.nombre, noche: "Luis Mendoza" },
+    responsables: { dia: u?.nombre ?? "—", noche: "Luis Mendoza" },
     vaciosFuera,
   };
 }
@@ -524,4 +541,86 @@ export async function guardarLecturaDeRonda(args: {
     return;
   }
   await guardarLectura({ ...args, ranura: r });
+}
+
+/* ---------- últimos movimientos (D49) ---------- */
+
+export type Movimiento = { id: string; ms: number; quien: string; texto: string; tipo: string };
+
+const NOMBRE_ETAPA: Record<string, string> = {
+  vacio: "vacío", enfriando: "enfriando", cargando: "cargando",
+  con_producto: "con producto", despachado: "despachado",
+};
+
+/** El registro de eventos, escrito en palabras. */
+export async function ultimosMovimientos(cuantos = 40): Promise<Movimiento[]> {
+  const [evs, us] = await Promise.all([
+    db.eventos.orderBy("creadoMs").reverse().limit(cuantos).toArray(),
+    db.usuarios.toArray(),
+  ]);
+  const nombre = new Map(us.map((u) => [u.id, u.nombre.split(" ")[0] ?? u.nombre]));
+  const pos = (x: unknown) => (typeof x === "string" ? x.replace("-", " ") : "");
+
+  return evs.map((e) => {
+    const c = (e.carga ?? {}) as Record<string, unknown>;
+    const num = typeof c.numero === "string" ? formatear(c.numero) : "un contenedor";
+    let texto: string;
+    switch (e.tipo) {
+      case "llegada":
+        texto = `registró la llegada de ${num} en ${pos(c.posicionId)}`; break;
+      case "lectura":
+        texto = c.codigo
+          ? `marcó ${c.codigo} en ${num} · ${pos(c.posicionId)}`
+          : `midió ${num} en ${pos(c.posicionId)}: ${typeof c.c === "number" ? formatearC(c.c) : "?"} °C`;
+        break;
+      case "mover":
+        texto = `movió ${num} de ${pos(c.de)} a ${pos(c.a)}`; break;
+      case "salida":
+        texto = `reportó la salida de ${num} desde ${pos(c.posicionId)}`; break;
+      case "deshacer-salida":
+        texto = `deshizo una salida`; break;
+      case "cambio-etapa":
+        texto = `pasó ${num} de ${NOMBRE_ETAPA[String(c.de)] ?? c.de} a ${NOMBRE_ETAPA[String(c.a)] ?? c.a}`; break;
+      case "corregir-estadia":
+        texto = `corrigió los datos de ${num}`; break;
+      case "corregir-lectura":
+        texto = `corrigió una lectura de ${num}`; break;
+      case "verificar-seccion":
+        texto = Number(c.correcciones) > 0
+          ? `verificó ${c.zona} y corrigió ${c.correcciones}`
+          : `verificó ${c.zona}: todo correcto`;
+        break;
+      default:
+        texto = e.tipo;
+    }
+    return { id: e.id, ms: e.creadoMs, quien: nombre.get(e.usuarioId) ?? "alguien", texto, tipo: e.tipo };
+  });
+}
+
+/* ---------- verificación de turno (D50) ---------- */
+
+export type Turno = "dia" | "noche";
+
+/** Turno día: de las 07:00 a las 19:00. El resto, noche. */
+export function turnoDe(ms = Date.now()): Turno {
+  const h = partes(ms).hora;
+  return h >= 7 && h < 19 ? "dia" : "noche";
+}
+
+export async function seccionesVerificadas(ms = Date.now()): Promise<Set<string>> {
+  const dia = diaOperativo(ms);
+  const turno = turnoDe(ms);
+  const vs = await db.verificaciones.filter((v) => v.dia === dia && v.turno === turno).toArray();
+  return new Set(vs.map((v) => v.zonaId));
+}
+
+export async function verificarSeccion(zonaId: string, nombreZona: string, correcciones: number, ms = Date.now()) {
+  const dia = diaOperativo(ms);
+  const turno = turnoDe(ms);
+  await db.transaction("rw", [db.verificaciones, db.eventos], async () => {
+    const previa = await db.verificaciones.filter((v) => v.dia === dia && v.turno === turno && v.zonaId === zonaId).first();
+    if (previa) await db.verificaciones.update(previa.id, { ms, correcciones, usuarioId: autor });
+    else await db.verificaciones.add({ id: uid(), dia, turno, zonaId, usuarioId: autor, ms, correcciones });
+    await anotar("verificar-seccion", { zonaId, zona: nombreZona, correcciones, turno });
+  });
 }

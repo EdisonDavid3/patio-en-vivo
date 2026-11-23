@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { EstadoPosicion, Zona } from "../datos/tipos";
 import type { VistaPatio } from "../datos/repo";
 import { COLS_PC, GRUPOS } from "../datos/zonas";
@@ -6,6 +6,7 @@ import { claseDe, valorDe, ETIQUETA_CLASE, ICONO_CLASE } from "./util";
 import { Numero } from "./comp/Numero";
 import { ETAPAS } from "../dominio/etapas";
 import { duracion } from "../dominio/tiempo";
+import { Movimientos } from "./comp/Movimientos";
 import { hhmmAmPm } from "../dominio/tiempo";
 
 type Filtro = { alertas: boolean; pendientes: boolean };
@@ -17,9 +18,9 @@ function pasa(e: EstadoPosicion, f: Filtro) {
 
 type Vistazo = { e: EstadoPosicion; x: number; y: number };
 
-function Tabla({ zona, filas, filtro, onPosicion, onVistazo }: {
+function Tabla({ zona, filas, filtro, onPosicion, onVistazo, sobre }: {
   zona: Zona; filas: EstadoPosicion[]; filtro: Filtro; onPosicion: (id: string) => void;
-  onVistazo: (v: Vistazo | null) => void;
+  onVistazo: (v: Vistazo | null) => void; sobre: string | null;
 }) {
   const cols = COLS_PC[zona.id] ?? 1;
   const porCol = Math.ceil(filas.length / cols);
@@ -46,7 +47,9 @@ function Tabla({ zona, filas, filtro, onPosicion, onVistazo }: {
                 const cl = claseDe(e);
                 const vis = pasa(e, filtro);
                 return (
-                  <tr key={e.posicion.id} className={cl + (vis ? "" : " apagado")}
+                  <tr key={e.posicion.id} data-pos={e.posicion.id} data-libre={e.estadia ? "no" : "si"}
+                      className={cl + (vis ? "" : " apagado")
+                        + (sobre === e.posicion.id ? (e.estadia ? " destino-no" : " destino-si") : "")}
                       onClick={() => e.estadia && onPosicion(e.posicion.id)}
                       onMouseEnter={(ev) => e.estadia && onVistazo({ e, x: ev.clientX, y: ev.clientY })}
                       onMouseMove={(ev) => e.estadia && onVistazo({ e, x: ev.clientX, y: ev.clientY })}
@@ -71,12 +74,54 @@ function Tabla({ zona, filas, filtro, onPosicion, onVistazo }: {
 }
 
 /** La hoja de patio completa, ajustada para que quepa entera en la pantalla. */
-export function PlanoPC({ vista, zonas, onPosicion, actualizado }: {
+export function PlanoPC({ vista, zonas, onPosicion, actualizado, puedeArrastrar, onMover }: {
   vista: VistaPatio; zonas: Zona[]; onPosicion: (id: string) => void; actualizado: string;
+  /** D51: arrastrar en el plano es solo del administrador. Los demás usan el botón Mover. */
+  puedeArrastrar?: boolean;
+  onMover?: (estadiaId: string, numero: string, de: string, a: string) => void;
 }) {
   const [filtro, setFiltro] = useState<Filtro>({ alertas: false, pendientes: false });
   const [pleno, setPleno] = useState(false);
   const [vistazo, setVistazo] = useState<Vistazo | null>(null);
+  const [arrastre, setArrastre] = useState<null | { estadiaId: string; numero: string; de: string; x: number; y: number }>(null);
+  const [sobre, setSobre] = useState<string | null>(null);
+  const candidato = useRef<null | { estadiaId: string; numero: string; de: string; x: number; y: number }>(null);
+
+  const bajo = useCallback((x: number, y: number) => {
+    const el = document.elementFromPoint(x, y)?.closest("tr[data-pos]") as HTMLElement | null;
+    return el ? { id: el.dataset.pos!, libre: el.dataset.libre === "si" } : null;
+  }, []);
+
+  useEffect(() => {
+    if (!puedeArrastrar) return;
+    function mover(ev: PointerEvent) {
+      const c = candidato.current;
+      if (!c) return;
+      if (!arrastre && Math.hypot(ev.clientX - c.x, ev.clientY - c.y) < 7) return;
+      setVistazo(null);
+      setArrastre({ ...c, x: ev.clientX, y: ev.clientY });
+      const d = bajo(ev.clientX, ev.clientY);
+      setSobre(d && d.id !== c.de ? d.id : null);
+    }
+    function soltar(ev: PointerEvent) {
+      const c = candidato.current;
+      candidato.current = null;
+      if (c && arrastre) {
+        const d = bajo(ev.clientX, ev.clientY);
+        if (d && d.libre && d.id !== c.de) onMover?.(c.estadiaId, c.numero, c.de, d.id);
+      }
+      setArrastre(null);
+      setSobre(null);
+    }
+    globalThis.addEventListener("pointermove", mover);
+    globalThis.addEventListener("pointerup", soltar);
+    globalThis.addEventListener("pointercancel", soltar);
+    return () => {
+      globalThis.removeEventListener("pointermove", mover);
+      globalThis.removeEventListener("pointerup", soltar);
+      globalThis.removeEventListener("pointercancel", soltar);
+    };
+  }, [puedeArrastrar, arrastre, bajo, onMover]);
   const lienzo = useRef<HTMLDivElement>(null);
   const plano = useRef<HTMLDivElement>(null);
   const [escala, setEscala] = useState(1);
@@ -116,11 +161,22 @@ export function PlanoPC({ vista, zonas, onPosicion, actualizado }: {
 
   const hoja = (
     <div className="pc-lienzo" ref={lienzo}>
-      <div className="pc-plano" ref={plano} style={{ transform: `scale(${escala})` }}>
+      <div className={"pc-plano" + (puedeArrastrar ? " arrastrable" : "") + (arrastre ? " arrastrando" : "")}
+           ref={plano} style={{ transform: `scale(${escala})` }}
+           onPointerDown={(ev) => {
+             if (!puedeArrastrar || ev.button !== 0) return;
+             const tr = (ev.target as HTMLElement).closest("tr[data-pos]") as HTMLElement | null;
+             if (!tr || tr.dataset.libre === "si") return;
+             const e = vista.porPosicion.get(tr.dataset.pos!);
+             if (!e?.estadia) return;
+             candidato.current = { estadiaId: e.estadia.id, numero: e.estadia.numero,
+                                   de: e.posicion.id, x: ev.clientX, y: ev.clientY };
+           }}>
         {GRUPOS.map((g) => (
           <div className="pc-col" key={g}>
             {zonas.filter((z) => z.grupo === g).map((z) => (
               <Tabla key={z.id} zona={z} filtro={filtro} onPosicion={onPosicion} onVistazo={setVistazo}
+                sobre={arrastre ? sobre : null}
                 filas={vista.lista.filter((e) => e.posicion.zonaId === z.id)} />
             ))}
           </div>
@@ -129,7 +185,13 @@ export function PlanoPC({ vista, zonas, onPosicion, actualizado }: {
     </div>
   );
 
-  const tarjeta = vistazo ? <Vistazo360 v={vistazo} zonas={zonas} /> : null;
+  const tarjeta = vistazo && !arrastre ? <Vistazo360 v={vistazo} zonas={zonas} /> : null;
+  const fantasma = arrastre ? (
+    <div className="arrastre" style={{ left: arrastre.x + 12, top: arrastre.y + 12 }}>
+      ⇄ {arrastre.numero}
+      <i>{sobre ? `soltar en ${sobre.replace("-", " ")}` : "busca una posición libre"}</i>
+    </div>
+  ) : null;
 
   if (pleno) {
     return (
@@ -137,6 +199,7 @@ export function PlanoPC({ vista, zonas, onPosicion, actualizado }: {
         <button type="button" className="salir" onClick={() => setPleno(false)}>Salir de pantalla completa (Esc)</button>
         {hoja}
         {tarjeta}
+        {fantasma}
       </div>
     );
   }
@@ -157,6 +220,7 @@ export function PlanoPC({ vista, zonas, onPosicion, actualizado }: {
           <button type="button" aria-pressed={filtro.pendientes}
             onClick={() => setFiltro((f) => ({ ...f, pendientes: !f.pendientes }))}>◷ Sin tomar en esta ronda</button>
         </div>
+        <Movimientos refresco={vista} estilo="barra" />
         <button type="button" className="vivo" style={{ cursor: "pointer" }} onClick={() => setPleno(true)}>
           ⛶ Pantalla completa
         </button>
@@ -164,6 +228,7 @@ export function PlanoPC({ vista, zonas, onPosicion, actualizado }: {
       </div>
       {hoja}
       {tarjeta}
+      {fantasma}
     </div>
   );
 }

@@ -7,7 +7,8 @@ import { ZONAS, TODAS_POSICIONES } from "./zonas";
 import { digitoVerificador } from "../dominio/iso6346";
 import { diaOperativo, ranurasDelDia, HORAS_FIJAS } from "../dominio/tiempo";
 import { rondaActual, USUARIO_DEMO } from "./repo";
-import type { Estadia, Lectura, TramoEtapa, Ubicacion } from "./tipos";
+import { crearUsuario, abrirSesion } from "./usuarios";
+import type { Estadia, Evento, Lectura, TramoEtapa, Ubicacion } from "./tipos";
 import { exigeTemperatura, IDEAL_PARA_CARGAR, type Etapa } from "../dominio/etapas";
 
 const PREFIJOS = ["MSCU","TGHU","CMAU","MSKU","TRLU","HLXU","SUDU","CAIU","GESU","MRKU",
@@ -49,6 +50,7 @@ function ranurasEntre(desdeMs: number, hastaMs: number) {
 }
 
 export async function sembrarSiHaceFalta(ahora = Date.now()): Promise<void> {
+  await sembrarUsuarios();
   if ((await db.estadias.count()) > 0) return;
   await sembrar(ahora);
 }
@@ -75,7 +77,19 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
   const ubicaciones: Ubicacion[] = [];
   const tramos: TramoEtapa[] = [];
   const lecturas: Lectura[] = [];
+  const eventos: Evento[] = [];
   let n = 0;
+
+  // los movimientos de la demostración quedan repartidos entre los usuarios de prueba
+  const gente = (await db.usuarios.toArray()).filter((u) => u.rol !== "visualizador");
+  const quien = (k: number) => gente[k % Math.max(1, gente.length)]?.id ?? USUARIO_DEMO;
+  let ev = 0;
+  const anota = (tipo: string, carga: unknown, ms: number) => {
+    eventos.push({
+      id: `ev-${ev}`, tipo, carga, usuarioId: quien(ev++), dispositivoId: "demo",
+      creadoMs: ms, enviadoMs: ms,   // historia ya enviada: no infla el contador de pendientes
+    });
+  };
 
   /**
    * Etapa según dónde está, como en el patio de verdad:
@@ -127,6 +141,8 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
       conAdvertencia: n === 7, suspendido: null, etapa, nota: "",
     });
 
+    anota("llegada", { estadiaId: id, posicionId, numero, etapa: "vacio" }, entrada);
+
     // historial de etapas: lo recorrido hasta llegar a la actual
     const pasos: Etapa[] = etapa === "vacio" ? ["vacio"]
       : etapa === "enfriando" ? ["vacio", "enfriando"]
@@ -140,6 +156,10 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
         hasta: j === pasos.length - 1 ? null : entrada + (j + 1) * paso,
         usuarioId: USUARIO_DEMO,
       });
+      if (j > 0) {
+        anota("cambio-etapa", { estadiaId: id, numero, posicionId, de: pasos[j - 1], a: et },
+          entrada + j * paso);
+      }
     });
 
     // una de cada seis pasó antes por otra posición: mover no reinicia el tiempo en patio
@@ -149,6 +169,7 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
       if (previa && corte < ahora) {
         ubicaciones.push({ id: `u-${n}a`, estadiaId: id, posicionId: previa, desde: entrada, hasta: corte });
         ubicaciones.push({ id: `u-${n}b`, estadiaId: id, posicionId, desde: corte, hasta: null });
+        anota("mover", { estadiaId: id, numero, de: previa, a: posicionId }, corte);
       } else {
         ubicaciones.push({ id: `u-${n}`, estadiaId: id, posicionId, desde: entrada, hasta: null });
       }
@@ -174,6 +195,11 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
       const desfase = Math.floor(r() * 44) - 4;
       // un contenedor sin energía al momento de la toma (D3)
       const codigo = n === 11 && ultima ? ("SE" as const) : null;
+      // solo las tomas de las últimas horas entran en los movimientos: si no, serían miles
+      if (ranura.ms > ahora - 14 * 3600_000) {
+        anota("lectura", { estadiaId: id, numero, posicionId, c: codigo ? null : c, codigo },
+          ranura.ms + desfase * 60_000);
+      }
       lecturas.push({
         id: `l-${n}-${i}`, estadiaId: id, posicionId, numero,
         tomadaMs: ranura.ms + desfase * 60_000,
@@ -202,7 +228,7 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
 
   await db.transaction("rw",
     [db.zonas, db.posiciones, db.contenedores, db.estadias, db.ubicaciones, db.tramosEtapa,
-     db.lecturas, db.usuarios, db.ajustes],
+     db.lecturas, db.eventos, db.usuarios, db.ajustes],
     async () => {
       await db.zonas.bulkPut(ZONAS);
       await db.posiciones.bulkPut(TODAS_POSICIONES);
@@ -213,10 +239,8 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
       await db.ubicaciones.bulkPut(ubicaciones);
       await db.tramosEtapa.bulkPut(tramos);
       await db.lecturas.bulkPut(lecturas);
-      await db.usuarios.put({
-        id: USUARIO_DEMO, nombre: "Danilo Zambrano", rol: "patero",
-        ordenSecciones: ["C", "B", "A", "PN", "E1", "E2", "OF"], activo: true,
-      });
+      await db.eventos.bulkPut(eventos.sort((a, b) => a.creadoMs - b.creadoMs));
+
       await db.ajustes.bulkPut([
         { clave: "modo", valor: "demo" },
         { clave: "sembradoMs", valor: ahora },
@@ -225,9 +249,31 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
     });
 }
 
+/** Los tres roles, para que se puedan probar. Es una demostración: los PIN se ven en la hoja 🧪. */
+export const USUARIOS_DEMO = [
+  { nombre: "Jorge Torres", rol: "administrador" as const, pin: "123456" },
+  { nombre: "Danilo Zambrano", rol: "patero" as const, pin: "1234" },
+  { nombre: "Marcela Vera", rol: "visualizador" as const, pin: "1111" },
+];
+
+async function sembrarUsuarios() {
+  if ((await db.usuarios.count()) > 0) return;
+  let patero: string | null = null;
+  for (const u of USUARIOS_DEMO) {
+    const r = await crearUsuario({
+      ...u,
+      ordenSecciones: u.rol === "patero" ? ["C", "B", "A", "PN", "E1", "E2", "OF"] : [],
+    });
+    if (r.ok && u.rol === "patero") patero = r.usuario.id;
+  }
+  // la demostración abre ya como patero, que es quien trabaja en el patio
+  if (patero) await abrirSesion(patero);
+}
+
 export async function reiniciarDemo(ahora = Date.now()) {
   await db.transaction("rw", db.tables, async () => {
     for (const t of db.tables) await t.clear();
   });
+  await sembrarUsuarios();
   await sembrar(ahora);
 }

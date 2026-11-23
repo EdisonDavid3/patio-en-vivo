@@ -586,6 +586,36 @@ tenga días de verdad y un día cerrado muestre sus 12 tomas.
 **Cada aparato guarda lo suyo.** Hasta la Fase 1 no hay servidor: lo que se registra en el teléfono
 no aparece en la PC. Ahora la app lo dice.
 
+## 12.quinquies Usuarios, roles y lo demás del 23-nov
+
+**Tres roles**, con los permisos en una sola tabla:
+
+| Rol | Qué puede | PIN |
+|---|---|---|
+| **Administrador** | Todo: usuarios, ajustes, arrastrar en el plano, y lo del patero. | 6 números, **se pide siempre** |
+| **Patero** | Llegadas, temperaturas, ronda, mover, salida, verificación de turno. | 4 números |
+| **Visualizador** | Solo mira: plano, listas, fichas y reportes. | 4 números |
+
+**Importante y dicho dentro de la app:** en la Fase 0 esto **no es un candado**. Sin servidor,
+cualquiera podría crearse un administrador en su propio teléfono. Los roles sirven para que cada
+quien vea lo suyo y no se equivoque de botón. La seguridad real es la Fase 1.
+
+**Primer ingreso desde el celular.** El QR lleva solo la dirección. Al abrirlo en un teléfono sin
+usuario, lo primero que se pide es **nombre y un PIN de 4 números**, y queda registrado como patero.
+Después entra solo con el PIN, también sin señal.
+
+**Últimos movimientos.** Botón 🕑 en el patio: *hora · quién · qué*, en palabras. Para esto hubo que
+guardar el número de contenedor y la posición en el registro de eventos; antes solo tenía
+identificadores internos.
+
+**Arrastrar en el plano de PC: solo el administrador.** Se mantiene presionado y se suelta en una
+posición libre; verde si cabe, rojo si está ocupada, y aviso con Deshacer al soltar.
+
+**Aviso de ronda.** Cuando llega la hora fija y quedan tomas, una franja arriba con el conteo.
+
+**Verificación de turno.** Lo que de verdad reemplaza la hoja de patio: un botón por sección,
+«Todo correcto en Sector C». Siete toques si todo cuadra.
+
 ## 13. Qué pasa cuando apruebes
 
 1. Creo `CLAUDE.md` con estas decisiones, para no perder el hilo entre sesiones.

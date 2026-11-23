@@ -74,6 +74,14 @@ Documento maestro del plan: `PLAN.md`. Formatos originales en `docs/formatos/`.
 | D45 | **El tutorial no arranca solo.** La primera vez aparece una barrita: «👋 ¿Primera vez por aquí? · Ver el recorrido · No, gracias». Después, siempre desde 🧪. | 23-nov |
 | D46 | **La fila del patio sin etiquetas con caja**: el número ocupa toda su línea y debajo van posición y etapa como texto normal; «sin tomar» es un punto azul con su palabra. Las cajas EN ESPERA / SIN TOMAR le robaban espacio al número. | 23-nov |
 | D47 | **La app dice que cada aparato guarda lo suyo.** En la hoja 🧪 y al tocar el contador: lo que se registra en el teléfono no aparece en la PC hasta la Fase 1. | 23-nov |
+| D48 | **Tres roles**: administrador, patero y visualizador. Quién puede qué vive en **una sola tabla**, `src/dominio/permisos.ts`, y las pantallas solo la consultan. **No es seguridad en la Fase 0**: sin servidor, cualquiera podría crearse un administrador en su teléfono. La app lo dice en la pantalla de usuarios. El candado real es la Fase 1 (D8). | 23-nov |
+| D49 | **Entrada con PIN, sesión abierta en el aparato.** Un teléfono recién abierto pide **nombre y PIN de 4 números** y queda registrado como **patero**. Después entra solo con el PIN, también sin señal. El **administrador lleva PIN de 6** y **se le pide siempre**, aunque el equipo recuerde la sesión. El PIN se guarda como huella SHA-256 con sal propia, nunca en claro. Cinco intentos y espera. | 23-nov |
+| D50 | **El QR lleva solo la dirección.** No carga nombre ni rol: su único fin es que un patero entre por primera vez desde su celular. Se genera en el propio aparato con `uqr` (sin internet) y está en la pantalla de Usuarios, junto con la dirección escrita y las instrucciones de iPhone. | 23-nov |
+| D51 | **Últimos movimientos**: hoja que se abre con el botón 🕑 —en la cabecera de la sección en teléfono, en la barra en PC— con *hora · quién · qué* en palabras. Salen del registro `eventos`, al que hubo que **añadirle el número de contenedor y la posición**: antes guardaba solo identificadores internos y no se podía escribir en palabras. | 23-nov |
+| D52 | **Arrastrar en el plano de PC: solo el administrador.** Se mantiene presionado y se suelta en una posición libre; el destino se pinta verde si cabe y rojo si está ocupado. Al soltar, aviso con **Deshacer**, sin ventana de confirmación. Patero y visualizador usan el botón **Mover** de siempre. | 23-nov |
+| D53 | **Aviso de ronda**: franja arriba cuando ha llegado una hora fija y quedan tomas pendientes («⏰ Ronda de las 4:00 p. m. · faltan 12»), con un toque para entrar y una ✕ para callarla hasta la ronda siguiente. Solo la ve quien puede medir. | 23-nov |
+| D54 | **Verificación de turno** (lo que de verdad reemplaza la hoja de patio): una vez por turno, **un botón por sección** — «Todo correcto en Sector C». Solo se tocan las filas que no cuadran. Siete toques si todo está bien, no 115. Queda guardado con día, turno, quién y cuántas correcciones. | 23-nov |
+| D55 | **La demostración siembra historia de movimientos** (llegadas, cambios de etapa, movimientos y las tomas de las últimas 14 horas) marcada como **ya enviada**, para que el panel no salga vacío y el contador de pendientes siga siendo honesto. | 23-nov |
 
 ## Estado
 **Fase 0 construida, probada y subida** (14-nov). 46 pruebas automáticas en verde; sin desbordes ni
@@ -155,7 +163,7 @@ C-1, C-10, C-11, C-2...). Hay una prueba que lo vigila.
 - [x] ~~Nombre del repositorio~~ → `EdisonDavid3/patio-en-vivo`, creado y con el código subido.
 - [x] ~~Settings → Pages → Source = GitHub Actions~~ → hecho; la página está publicada.
 - [ ] Lista real de opciones de **Producto** y de **Estado**.
-- [ ] Nombres de los pateros y quién es supervisor.
+- [ ] Nombres reales de los pateros y quién es administrador (ya hay pantalla de Usuarios para crearlos).
 - [ ] Un Android y un iPhone reales para probar (Fase 1).
 - [ ] Cuenta gratis en supabase.com (Fase 1).
 
@@ -236,6 +244,15 @@ reporte oficial con D34 y D35, tutorial (D38) y modo de prueba (D39).
 
 **Lo único que queda de esa lista:** el **reporte de tiempo en patio** con el desglose por etapa
 (el dato ya se guarda en `tramosEtapa` y se ve en el historial del contenedor). Es de la Fase 2.
+
+## Usuarios y roles (D48–D50) — leer antes de tocarlo
+- `src/dominio/permisos.ts` es **la única** tabla de permisos. Si se agrega una pantalla o un botón,
+  se agrega su acción ahí, no un `if (rol === ...)` suelto.
+- `src/datos/usuarios.ts` guarda usuarios, PIN y sesión. El PIN **nunca** se guarda en claro.
+- **Esto no es seguridad hasta la Fase 1.** No prometer lo contrario a nadie: sin servidor, los roles
+  solo ordenan lo que cada quien ve. Está dicho dentro de la app, en la pantalla de Usuarios.
+- Los PIN de la demostración se ven en la hoja 🧪, y desde ahí también se puede
+  **simular un teléfono nuevo** (borra todo y muestra la pantalla de primer ingreso).
 
 ## Revisión del 23-nov sobre PC (D40–D47)
 El problema de fondo era que **en PC se mostraba la pantalla del teléfono estirada**. Ahora el

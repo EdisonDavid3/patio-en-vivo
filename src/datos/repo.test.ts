@@ -1,9 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
 import { db } from "./db";
-import { sembrar } from "./semilla";
+import { sembrar, USUARIOS_DEMO } from "./semilla";
 import { registrarLlegada, mover, reportarSalida, deshacerSalida, vistaPatio, buscar, rondaActual, lecturasDe, ubicacionesDe, guardarLecturaDeRonda, cambiarEtapa, pasarACamara, sacarDeCamara,
-  tiempoPorEtapa, armarReporte, CAMARA_CARGA, diasConDatos } from "./repo";
+  tiempoPorEtapa, armarReporte, CAMARA_CARGA, diasConDatos, ultimosMovimientos,
+  turnoDe, verificarSeccion, seccionesVerificadas, fijarAutor, pendientesDeEnvio } from "./repo";
+import { crearUsuario, comprobarPin, abrirSesion, sesion, cerrarSesion, listarUsuarios,
+  cambiarRol, activarUsuario } from "./usuarios";
+import { instante as momento } from "../dominio/tiempo";
 import { instante, duracion } from "../dominio/tiempo";
 import { resumen, type Celda } from "../dominio/calculos";
 
@@ -411,5 +415,157 @@ describe("la demostración trae varios días (modo de prueba)", () => {
       expect(ls.length).toBeLessThanOrEqual(12);
       expect(ls.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("usuarios, PIN y sesión", () => {
+  it("crea un usuario y lo deja entrar con su PIN", async () => {
+    const r = await crearUsuario({ nombre: "Pedro Mera", rol: "patero", pin: "4821" });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect((await comprobarPin(r.usuario.id, "4821")).ok).toBe(true);
+    const malo = await comprobarPin(r.usuario.id, "0000");
+    expect(malo.ok).toBe(false);
+    if (!malo.ok) expect(malo.error).toContain("PIN");
+  });
+
+  it("nunca guarda el PIN en claro", async () => {
+    const r = await crearUsuario({ nombre: "Ana Loor", rol: "patero", pin: "7391" });
+    if (!r.ok) throw new Error("no se creó");
+    expect(JSON.stringify(r.usuario)).not.toContain("7391");
+    expect(r.usuario.huellaPin).toHaveLength(64);
+    // dos usuarios con el mismo PIN tienen huellas distintas: cada uno lleva su sal
+    const otro = await crearUsuario({ nombre: "Luis Vera", rol: "patero", pin: "7391" });
+    if (!otro.ok) throw new Error("no se creó");
+    expect(otro.usuario.huellaPin).not.toBe(r.usuario.huellaPin);
+  });
+
+  it("exige PIN de 6 números para el administrador y de 4 para los demás", async () => {
+    expect((await crearUsuario({ nombre: "Jefa Uno", rol: "administrador", pin: "1234" })).ok).toBe(false);
+    expect((await crearUsuario({ nombre: "Jefa Dos", rol: "administrador", pin: "123456" })).ok).toBe(true);
+    expect((await crearUsuario({ nombre: "Pat Uno", rol: "patero", pin: "123456" })).ok).toBe(false);
+  });
+
+  it("no deja dos usuarios con el mismo nombre", async () => {
+    await crearUsuario({ nombre: "Repetido Uno", rol: "patero", pin: "1111" });
+    const dos = await crearUsuario({ nombre: "repetido uno", rol: "patero", pin: "2222" });
+    expect(dos.ok).toBe(false);
+  });
+
+  it("la sesión se queda abierta en el aparato y se puede cerrar", async () => {
+    const r = await crearUsuario({ nombre: "Sesión Prueba", rol: "patero", pin: "5555" });
+    if (!r.ok) throw new Error("no se creó");
+    expect(await sesion()).toBeNull();
+    await abrirSesion(r.usuario.id);
+    expect((await sesion())?.nombre).toBe("Sesión Prueba");
+    await cerrarSesion();
+    expect(await sesion()).toBeNull();
+  });
+
+  it("un usuario desactivado no entra, aunque su sesión estuviera abierta", async () => {
+    const r = await crearUsuario({ nombre: "Baja Prueba", rol: "patero", pin: "6666" });
+    if (!r.ok) throw new Error("no se creó");
+    await abrirSesion(r.usuario.id);
+    await activarUsuario(r.usuario.id, false);
+    expect(await sesion()).toBeNull();
+    expect((await comprobarPin(r.usuario.id, "6666")).ok).toBe(false);
+  });
+
+  it("subir a administrador obliga a poner un PIN más largo", async () => {
+    const r = await crearUsuario({ nombre: "Sube Prueba", rol: "patero", pin: "1212" });
+    if (!r.ok) throw new Error("no se creó");
+    expect((await cambiarRol(r.usuario.id, "administrador")).ok).toBe(false);
+    expect((await cambiarRol(r.usuario.id, "administrador", "998877")).ok).toBe(true);
+    expect((await comprobarPin(r.usuario.id, "998877")).ok).toBe(true);
+  });
+
+  it("la demostración trae los tres roles", async () => {
+    await sembrar(AHORA);
+    const { crearUsuario: _c } = await import("./usuarios");
+    for (const u of USUARIOS_DEMO) {
+      const r = await crearUsuario({ nombre: u.nombre, rol: u.rol, pin: u.pin });
+      expect(r.ok).toBe(true); // se crean desde cero en esta base de prueba
+    }
+    const lista = await listarUsuarios();
+    expect(lista.map((u) => u.rol).sort()).toEqual(["administrador", "patero", "visualizador"]);
+  });
+});
+
+describe("últimos movimientos", () => {
+  it("escribe en palabras lo que pasó, con quién lo hizo", async () => {
+    await sembrar(AHORA);
+    const r = await crearUsuario({ nombre: "Danilo Zambrano", rol: "patero", pin: "1234" });
+    if (!r.ok) throw new Error("no se creó");
+    fijarAutor(r.usuario.id);
+
+    const v = await vistaPatio(AHORA);
+    const libre = v.lista.find((x) => !x.estadia)!;
+    await registrarLlegada({ posicionId: libre.posicion.id, numero: "MSCU1281608", ahora: AHORA });
+    const o = v.lista.find((x) => x.etapa === "con_producto")!;
+    const otraLibre = v.lista.filter((x) => !x.estadia)[1]!;
+    await mover(o.estadia!.id, otraLibre.posicion.id, AHORA);
+
+    const movs = await ultimosMovimientos(10);
+    expect(movs.length).toBeGreaterThanOrEqual(2);
+    expect(movs[0]!.quien).toBe("Danilo");
+    expect(movs.some((m) => m.texto.includes("movió") && m.texto.includes("MSCU") === false || m.texto.includes("movió"))).toBe(true);
+    const llegada = movs.find((m) => m.tipo === "llegada")!;
+    expect(llegada.texto).toContain("MSCU 128160 8");
+    expect(llegada.texto).toContain(libre.posicion.id.replace("-", " "));
+    // vienen del más nuevo al más viejo
+    expect(movs[0]!.ms).toBeGreaterThanOrEqual(movs[movs.length - 1]!.ms);
+  });
+});
+
+describe("verificación de turno", () => {
+  it("distingue turno día y turno noche", () => {
+    expect(turnoDe(momento(2026, 11, 23, 10, 0))).toBe("dia");
+    expect(turnoDe(momento(2026, 11, 23, 18, 59))).toBe("dia");
+    expect(turnoDe(momento(2026, 11, 23, 19, 0))).toBe("noche");
+    expect(turnoDe(momento(2026, 11, 24, 3, 0))).toBe("noche");
+    expect(turnoDe(momento(2026, 11, 24, 7, 0))).toBe("dia");
+  });
+
+  it("guarda qué secciones se verificaron en este turno", async () => {
+    await sembrar(AHORA);
+    expect((await seccionesVerificadas(AHORA)).size).toBe(0);
+    await verificarSeccion("C", "Sector C", 0, AHORA);
+    await verificarSeccion("B", "Sector B", 2, AHORA);
+    const hechas = await seccionesVerificadas(AHORA);
+    expect([...hechas].sort()).toEqual(["B", "C"]);
+    // el turno de noche empieza de cero
+    expect((await seccionesVerificadas(momento(2026, 11, 14, 22, 0))).size).toBe(0);
+  });
+
+  it("verificar queda en los movimientos", async () => {
+    await sembrar(AHORA);
+    await verificarSeccion("C", "Sector C", 0, AHORA);
+    const movs = await ultimosMovimientos(5);
+    expect(movs[0]!.texto).toContain("Sector C");
+    expect(movs[0]!.texto).toContain("todo correcto");
+  });
+});
+
+describe("la demostración trae historia de movimientos", () => {
+  it("al abrir ya hay movimientos escritos en palabras", async () => {
+    await sembrar(AHORA);
+    // lo más nuevo son las tomas de temperatura
+    const nuevos = await ultimosMovimientos(30);
+    expect(nuevos.length).toBe(30);
+    expect(nuevos.every((m) => m.texto.length > 10)).toBe(true);
+    expect(nuevos.some((m) => m.texto.includes("midió"))).toBe(true);
+    expect(nuevos[0]!.ms).toBeGreaterThanOrEqual(nuevos.at(-1)!.ms);
+
+    // mirando más atrás aparecen llegadas y cambios de etapa
+    const todos = await ultimosMovimientos(500);
+    const tipos = new Set(todos.map((m) => m.tipo));
+    expect(tipos.has("llegada")).toBe(true);
+    expect(tipos.has("cambio-etapa")).toBe(true);
+    expect(todos.find((m) => m.tipo === "llegada")!.texto).toContain("registró la llegada");
+  });
+
+  it("la historia sembrada no cuenta como pendiente de enviar", async () => {
+    await sembrar(AHORA);
+    expect(await pendientesDeEnvio()).toBe(0);
   });
 });

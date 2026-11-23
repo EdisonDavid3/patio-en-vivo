@@ -5,6 +5,7 @@ import { recordarSeccion } from "../datos/repo";
 import { MiniPlano } from "./MiniPlano";
 import { claseDe, ETIQUETA_CLASE, ICONO_CLASE, valorDe } from "./util";
 import { Numero } from "./comp/Numero";
+import { Movimientos } from "./comp/Movimientos";
 import { hhmmAmPm } from "../dominio/tiempo";
 import { ETAPAS } from "../dominio/etapas";
 
@@ -116,6 +117,7 @@ export function Patio({ vista, zonas, onPosicion, destacada }: {
             <b>{zona.nombre}</b>
             <span>{dela.filter((e) => e.estadia).length} ocupadas · {dela.length - dela.filter((e) => e.estadia).length} libres</span>
             <div className="nav">
+              <Movimientos refresco={vista} />
               <button type="button" onClick={() => irA(-1)} aria-label="Sección anterior">‹</button>
               <button type="button" onClick={() => irA(1)} aria-label="Sección siguiente">›</button>
             </div>

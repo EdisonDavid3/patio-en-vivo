@@ -13,6 +13,7 @@ import { GraficoTomas } from "./comp/GraficoTomas";
 import { HojaTemperatura } from "./comp/HojaTemperatura";
 import { ETAPAS, faltaParaCargar, listoParaCargar, type Etapa } from "../dominio/etapas";
 import { formatearC } from "../dominio/temperatura";
+import { puede, type Rol } from "../dominio/permisos";
 import { diaOperativo, duracion, fechaCorta, hhmmAmPm, HORAS_FIJAS, ranurasDelDia } from "../dominio/tiempo";
 
 const PRODUCTOS = ["HOSO 20/30", "HOSO 30/40", "HOSO 40/50", "HOSO 50/60", "HLSO 31/40",
@@ -22,8 +23,8 @@ const CERO: Record<Etapa, number> = { vacio: 0, enfriando: 0, cargando: 0, con_p
 
 type Hoja = null | "camara" | "sacar" | "mover" | "salida" | "corregir" | "historial" | "temp";
 
-export function Detalle({ vista, zonas, posicionId, onCerrar, onAviso, enVentana }: {
-  vista: VistaPatio; zonas: Zona[]; posicionId: string;
+export function Detalle({ vista, zonas, posicionId, rol, onCerrar, onAviso, enVentana }: {
+  vista: VistaPatio; zonas: Zona[]; posicionId: string; rol: Rol;
   onCerrar: () => void; onAviso: (texto: string, deshacer?: () => void) => void;
   /** En PC el detalle vive dentro de una ventana pequeña, no en una pantalla entera. */
   enVentana?: boolean;
@@ -94,13 +95,13 @@ export function Detalle({ vista, zonas, posicionId, onCerrar, onAviso, enVentana
           <span className={"etapa grande " + etapa}>{regla.nombre}</span>
           {est.conAdvertencia && <span className="etapa grande alerta"
             style={{ background: "var(--ale-sup)", color: "var(--ale)", borderColor: "var(--ale)" }}>Revisar Nº</span>}
-          <button type="button" className="btn-temp" title="Tomar temperatura ahora"
+          {puede(rol, "medir") && <button type="button" className="btn-temp" title="Tomar temperatura ahora"
             onClick={async () => {
               if (!regla.mide) await cambiarEtapa(est.id, "enfriando");
               setHoja("temp");
             }}>
             🌡 {regla.mide ? "Tomar temperatura" : "Encender y medir"}
-          </button>
+          </button>}
         </div>
         <Numero numero={est.numero} tamano="grande" />
         <div className="ubi" style={{ marginTop: 3 }}>{zona.nombre} · {e.posicion.numero}</div>
@@ -118,36 +119,43 @@ export function Detalle({ vista, zonas, posicionId, onCerrar, onAviso, enVentana
           : <div className="falta">❄ Enfriando. Todavía sin lectura.</div>)}
 
       {/* acción principal según la etapa */}
-      {etapa === "vacio" && (
+      {etapa === "vacio" && puede(rol, "mover") && (
         <button type="button" className="btn btn-etapa"
           onClick={async () => { await cambiarEtapa(est.id, "enfriando"); onAviso("Puesto a enfriar"); }}>
           ❄ Empezar a enfriar
         </button>
       )}
-      {etapa === "enfriando" && (
+      {etapa === "enfriando" && puede(rol, "mover") && (
         <button type="button" className={"btn btn-carga" + (listo ? " btn-listo" : "")}
           disabled={libresCamara.length === 0} onClick={() => void irACamara()}>
           ⇩ Pasar a cámara 3 y 4
           {libresCamara.length === 0 ? " · sin cupo" : ` · ${libresCamara.length} libre${libresCamara.length === 1 ? "" : "s"}`}
         </button>
       )}
-      {etapa === "cargando" && (
+      {etapa === "cargando" && puede(rol, "mover") && (
         <button type="button" className="btn btn-pri" onClick={() => setHoja("sacar")}>
           ⇧ Sacar de la cámara
         </button>
       )}
-      {etapa === "con_producto" && (
+      {etapa === "con_producto" && puede(rol, "salida") && (
         <button type="button" className="btn btn-rojo" onClick={() => setHoja("salida")}>
           ⤴ Reportar la salida
         </button>
       )}
 
       <div className="acc">
-        <button type="button" onClick={() => setHoja("mover")}><em>⇄</em>Mover</button>
-        <button type="button" onClick={() => setHoja("corregir")}><em>✎</em>Corregir</button>
+        {puede(rol, "mover") && <button type="button" onClick={() => setHoja("mover")}><em>⇄</em>Mover</button>}
+        {puede(rol, "corregir") && <button type="button" onClick={() => setHoja("corregir")}><em>✎</em>Corregir</button>}
         <button type="button" onClick={() => setHoja("historial")}><em>◷</em>Historial</button>
-        <button type="button" className="pel" onClick={() => setHoja("salida")}><em>⤴</em>Salida</button>
+        {puede(rol, "salida") && (
+          <button type="button" className="pel" onClick={() => setHoja("salida")}><em>⤴</em>Salida</button>
+        )}
       </div>
+      {!puede(rol, "mover") && (
+        <p className="ayuda" style={{ textAlign: "center" }}>
+          Tu rol solo consulta. Para cambiar algo, pídeselo a un patero o al administrador.
+        </p>
+      )}
 
       {regla.mide ? (
         <div className="campo">
