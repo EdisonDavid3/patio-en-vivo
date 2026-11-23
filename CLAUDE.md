@@ -66,6 +66,14 @@ Documento maestro del plan: `PLAN.md`. Formatos originales en `docs/formatos/`.
 | D37 | **Llegada de una sola pasada** con **teclado propio en pantalla**: el del teléfono no cambia de letras a números de forma fiable. Un campo de 11 caracteres con el formato visual «MSCU 128160 8» y lo que falta en guiones bajos; tras la cuarta letra el teclado pasa solo a números. Temperatura, producto, sello, estado y nota **plegados en hojas**. | 23-nov |
 | D38 | **Modo tutorial lúdico**: 12 pasos con foco sobre la parte que explica, burbuja con emoji, puntos de avance y salida en cualquier momento. Arranca solo la primera vez (marca en `localStorage`) y se repite desde el botón 🧪. Los pasos que necesitan una pantalla abierta (ronda, llegada) la abren ellos mismos con `prepara`. | 23-nov |
 | D39 | **Botón 🧪 Modo de prueba** en la cabecera: explica que nada es real, repite el tutorial y **reinicia el modo de prueba** (regenera los datos). Reemplaza al botón que estaba al final de la lista del patio. | 23-nov |
+| D40 | **En PC el detalle no es una pantalla, es una ventana.** Pasar el mouse por una fila del plano muestra una **tarjeta con lo importante y sin gráfico** (número, posición, etapa, última temperatura con su hora, producto, sello, tiempo en patio). El clic abre una **ventana pequeña** sobre el plano, que sigue visible detrás. La pantalla completa de detalle se queda solo en el teléfono. Antes el detalle medía 1587 px de alto en una pantalla de 768 y el gráfico 1302 px de ancho. | 23-nov |
+| D41 | **El gráfico va plegado** («📈 Temperaturas del día · x de y tomas ▾») en teléfono y en PC, y **nunca pasa de 420 px de ancho**. Además, **las tomas que todavía no tocan dejan de dibujarse como no realizadas**: a las 9 a. m. el turno noche no son seis tomas perdidas, es que aún no es la hora. Eso era lo que hacía que el gráfico se viera sin sentido. | 23-nov |
+| D42 | **La demostración trae 5 días operativos**, no 44 horas. Así el selector de día del reporte tiene días de verdad y los gráficos de un día cerrado salen llenos. Un contenedor *enfriando* solo lleva unas horas midiéndose, porque se enciende poco antes de cargar. | 23-nov |
+| D43 | **Botón «🌡 Tomar temperatura»** arriba a la derecha de la tarjeta de detalle, en teléfono y en la ventana de PC. Guarda en la ronda en curso. Si el contenedor está vacío dice **«Encender y medir»** y lo pasa a *enfriando* antes de pedir el valor. El teclado **arranca vacío**, no precargado con la lectura anterior. | 23-nov |
+| D44 | **La llegada en PC es una ventana con campo de texto normal**: se escribe con el teclado del equipo, en mayúsculas y sin dejar meter letras donde van números. **El teclado en pantalla es solo para el teléfono.** | 23-nov |
+| D45 | **El tutorial no arranca solo.** La primera vez aparece una barrita: «👋 ¿Primera vez por aquí? · Ver el recorrido · No, gracias». Después, siempre desde 🧪. | 23-nov |
+| D46 | **La fila del patio sin etiquetas con caja**: el número ocupa toda su línea y debajo van posición y etapa como texto normal; «sin tomar» es un punto azul con su palabra. Las cajas EN ESPERA / SIN TOMAR le robaban espacio al número. | 23-nov |
+| D47 | **La app dice que cada aparato guarda lo suyo.** En la hoja 🧪 y al tocar el contador: lo que se registra en el teléfono no aparece en la PC hasta la Fase 1. | 23-nov |
 
 ## Estado
 **Fase 0 construida, probada y subida** (14-nov). 46 pruebas automáticas en verde; sin desbordes ni
@@ -228,6 +236,11 @@ reporte oficial con D34 y D35, tutorial (D38) y modo de prueba (D39).
 
 **Lo único que queda de esa lista:** el **reporte de tiempo en patio** con el desglose por etapa
 (el dato ya se guarda en `tramosEtapa` y se ve en el historial del contenedor). Es de la Fase 2.
+
+## Revisión del 23-nov sobre PC (D40–D47)
+El problema de fondo era que **en PC se mostraba la pantalla del teléfono estirada**. Ahora el
+plano es la pantalla de PC y todo lo demás se abre encima en ventanas. Regla para lo que venga:
+**en PC nada ocupa una pantalla entera salvo el plano y el reporte.**
 
 ## Regla de arquitectura
 Las pantallas **nunca** tocan Supabase ni IndexedDB directamente. Todo pasa por **una sola capa de datos**,

@@ -53,6 +53,9 @@ export async function sembrarSiHaceFalta(ahora = Date.now()): Promise<void> {
   await sembrar(ahora);
 }
 
+/** Días operativos completos que trae la demostración. */
+export const DIAS_DEMO = 5;
+
 export async function sembrar(ahora = Date.now()): Promise<void> {
   const r = azar(20261114);
   const ronda = rondaActual(ahora);
@@ -100,7 +103,7 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
     n++;
     const numero = numeroValido(r, usados);
     const id = `e-${n}`;
-    const diasAtras = 1 + Math.floor(r() * 4);
+    const diasAtras = 1 + Math.floor(r() * (DIAS_DEMO + 2));
     const entrada = ahora - diasAtras * 86_400_000 - Math.floor(r() * 10) * 3600_000;
 
     const etapa = etapaPorPosicion.get(posicionId)!;
@@ -156,8 +159,10 @@ export async function sembrar(ahora = Date.now()): Promise<void> {
     // D25: a los vacíos no se les toma temperatura, así que no tienen lecturas
     if (!exigeTemperatura(etapa)) continue;
 
-    // lecturas de las últimas 44 horas, en cada hora fija
-    const desde = Math.max(entrada, ahora - 44 * 3600_000);
+    // Lecturas de los últimos días operativos, en cada hora fija.
+    // Un contenedor enfriando se enciende poco antes de cargar: solo lleva unas horas midiéndose.
+    const ventanaMs = etapa === "enfriando" ? 20 * 3600_000 : DIAS_DEMO * 86_400_000;
+    const desde = Math.max(entrada, ahora - ventanaMs);
     let i = 0;
     for (const ranura of ranurasEntre(desde, ronda.ms)) {
       i++;

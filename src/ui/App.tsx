@@ -33,16 +33,19 @@ export function App() {
   const [hojaPrueba, setHojaPrueba] = useState(false);
   const [reiniciando, setReiniciando] = useState(false);
 
-  // la primera vez que alguien abre la app, se le ofrece el recorrido
+  const [invita, setInvita] = useState(false);
+
+  // el recorrido NO arranca solo: se ofrece una vez y lo elige quien abre la app
   useEffect(() => {
     try {
-      if (!localStorage.getItem("ts-tutorial")) setTutorial(true);
+      if (!localStorage.getItem("ts-tutorial")) setInvita(true);
     } catch { /* almacenamiento bloqueado */ }
   }, []);
-  function cerrarTutorial() {
-    setTutorial(false);
+  function marcarVisto() {
+    setInvita(false);
     try { localStorage.setItem("ts-tutorial", "visto"); } catch { /* da igual */ }
   }
+  function cerrarTutorial() { setTutorial(false); marcarVisto(); }
   const ancho = useAncho();
   const [tema, alternarTema] = useTema();
 
@@ -80,7 +83,10 @@ export function App() {
     buscar: "Buscar contenedor", reporte: "Reporte diario", detalle: "Detalle",
   };
 
-  const cuerpoFijo = pantalla === "ronda" || (ancho && pantalla === "patio") || pantalla === "reporte";
+  // En PC el detalle y la llegada se abren como ventana sobre el patio, no como pantalla aparte.
+  const enVentanaPC = ancho && (pantalla === "detalle" || pantalla === "llegada");
+  const base: Pantalla = enVentanaPC ? "patio" : pantalla;
+  const cuerpoFijo = base === "ronda" || (ancho && base === "patio") || base === "reporte";
 
   return (
     <div className="app">
@@ -98,7 +104,7 @@ export function App() {
           </nav>
         )}
         <button type="button" className={"sinc" + (pendientes === 0 ? " limpio" : "")}
-          onClick={() => setAviso({ texto: pendientes === 0 ? "Todo enviado" : `${pendientes} registros esperan WiFi` })}>
+          onClick={() => setAviso({ texto: "Fase 0: este aparato guarda sus propios datos. No se comparten con otros." })}>
           <i />{pendientes === 0 ? "Al día" : `${pendientes} pend.`} · {hhmmAmPm(ahora)}
         </button>
         <button type="button" className="btn-prueba" onClick={() => setHojaPrueba(true)}
@@ -108,34 +114,65 @@ export function App() {
         </button>
       </header>
 
+      {invita && !tutorial && (
+        <div className="invita">
+          <span>👋 ¿Primera vez por aquí?</span>
+          <button type="button" className="si" onClick={() => { setInvita(false); setTutorial(true); }}>
+            Ver el recorrido
+          </button>
+          <button type="button" onClick={marcarVisto}>No, gracias</button>
+        </div>
+      )}
+
       <main className={"cuerpo" + (cuerpoFijo ? " fijo" : "")}>
-        {pantalla === "patio" && (ancho
+        {base === "patio" && (ancho
           ? <PlanoPC vista={vista} zonas={zonas} onPosicion={abrirPosicion} actualizado={hhmmAmPm(ahora)} />
           : <Patio vista={vista} zonas={zonas} onPosicion={abrirPosicion} destacada={destacada} />)}
 
-        {pantalla === "llegada" && (
+        {base === "llegada" && (
           <Llegada vista={vista} zonas={zonas} posicionId={seleccion}
             onCancelar={() => setPantalla("patio")}
             onListo={(id) => { setSeleccion(id); setAviso({ texto: `Llegada registrada en ${id.replace("-", " ")}` }); setPantalla("patio"); }} />
         )}
 
-        {pantalla === "ronda" && (
+        {base === "ronda" && (
           <Ronda vista={vista} zonas={zonas} usuario={usuario} onSalir={() => setPantalla("patio")} />
         )}
 
-        {pantalla === "buscar" && (
+        {base === "buscar" && (
           <Buscar vista={vista} zonas={zonas}
             onPosicion={(id) => { setDestacada(id); abrirPosicion(id); }} />
         )}
 
-        {pantalla === "reporte" && <Reporte />}
+        {base === "reporte" && <Reporte />}
 
-        {pantalla === "detalle" && seleccion && (
+        {base === "detalle" && seleccion && (
           <Detalle vista={vista} zonas={zonas} posicionId={seleccion}
             onCerrar={() => setPantalla("patio")}
             onAviso={(texto, deshacer) => setAviso({ texto, deshacer })} />
         )}
       </main>
+
+      {enVentanaPC && (
+        <div className="ventana-velo" onClick={() => setPantalla("patio")}>
+          <div className="ventana" onClick={(e) => e.stopPropagation()}>
+            <div className="ventana-cab">
+              <b>{pantalla === "detalle" ? "Contenedor" : "Registrar llegada"}</b>
+              <button type="button" onClick={() => setPantalla("patio")} aria-label="Cerrar">✕</button>
+            </div>
+            {pantalla === "detalle" && seleccion && (
+              <Detalle enVentana vista={vista} zonas={zonas} posicionId={seleccion}
+                onCerrar={() => setPantalla("patio")}
+                onAviso={(texto, deshacer) => setAviso({ texto, deshacer })} />
+            )}
+            {pantalla === "llegada" && (
+              <Llegada enVentana vista={vista} zonas={zonas} posicionId={seleccion}
+                onCancelar={() => setPantalla("patio")}
+                onListo={(id) => { setSeleccion(id); setAviso({ texto: `Llegada registrada en ${id.replace("-", " ")}` }); setPantalla("patio"); }} />
+            )}
+          </div>
+        </div>
+      )}
 
       {!ancho && (
         <nav className="pie">
@@ -180,6 +217,13 @@ export function App() {
               Reiniciar borra lo que hayas registrado aquí y arma un patio nuevo. Es lo que conviene
               hacer cuando salga una versión nueva de la app.
             </p>
+            <div className="aviso" style={{ background: "var(--acento-sup)", borderColor: "var(--acento)", borderLeftColor: "var(--acento)" }}>
+              <b style={{ color: "var(--acento-tinta)" }}>📵 Cada aparato guarda lo suyo</b>
+              <p>
+                Lo que registras en el teléfono <b>no aparece en la PC</b>, ni al revés. En la Fase 0
+                no hay servidor: cada navegador tiene su propio patio. Se juntan en la Fase 1.
+              </p>
+            </div>
             <p className="ayuda">
               Pendientes de enviar: {pendientes}. En la Fase 0 ese número solo sube, porque todavía
               no hay servidor a donde mandarlos.

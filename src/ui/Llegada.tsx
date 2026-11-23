@@ -3,19 +3,31 @@ import type { Zona } from "../datos/tipos";
 import type { VistaPatio } from "../datos/repo";
 import { registrarLlegada } from "../datos/repo";
 import { db } from "../datos/db";
-import { Teclado } from "./comp/Teclado";
 import { TecladoISO, NumeroEnProceso } from "./comp/TecladoISO";
-import { aNumero, mostrarValor } from "./util";
+import { HojaTemperatura } from "./comp/HojaTemperatura";
 import { validar } from "../dominio/iso6346";
-import { ETIQUETA, ICONO, esImprobable, formatearC, rango } from "../dominio/temperatura";
+import { formatearC } from "../dominio/temperatura";
 
 const PRODUCTOS = ["HOSO 20/30", "HOSO 30/40", "HOSO 40/50", "HOSO 50/60", "HLSO 31/40",
                    "HLSO 41/50", "HLSO 61/70", "P&D 51/60", "PUD 71/90", "EZP 41/50"];
 const ESTADOS = ["En espera", "Cargando", "Despachado", "Vacío", "Sin energía"];
 
-export function Llegada({ vista, zonas, posicionId, onListo, onCancelar }: {
+/** Limpia lo que se escribe: 4 letras y luego 7 números, en mayúsculas. */
+function limpiar(texto: string): string {
+  const crudo = texto.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 11);
+  let out = "";
+  for (const c of crudo) {
+    if (out.length < 4) { if (/[A-Z]/.test(c)) out += c; }
+    else if (/[0-9]/.test(c)) out += c;
+  }
+  return out;
+}
+
+export function Llegada({ vista, zonas, posicionId, onListo, onCancelar, enVentana }: {
   vista: VistaPatio; zonas: Zona[]; posicionId: string | null;
   onListo: (posicionId: string) => void; onCancelar: () => void;
+  /** En PC se escribe con el teclado de verdad; el teclado en pantalla es solo para el teléfono. */
+  enVentana?: boolean;
 }) {
   const [pos, setPos] = useState<string | null>(posicionId);
   const [num, setNum] = useState("");
@@ -118,9 +130,19 @@ export function Llegada({ vista, zonas, posicionId, onListo, onCancelar }: {
       )}
       {error && <div className="aviso"><b>No se pudo guardar</b><p>{error}</p></div>}
 
-      {!completo && <TecladoISO valor={num} onValor={(v) => { setNum(v); setError(null); }} />}
+      {enVentana ? (
+        <div className="l-campo">
+          <input autoFocus value={num} spellCheck={false} autoComplete="off" inputMode="text"
+            aria-label="Número de contenedor"
+            placeholder="MSCU1281608"
+            onChange={(ev) => { setNum(limpiar(ev.target.value)); setError(null); }} />
+          <p className="ayuda">Escríbelo con tu teclado. Se pone en mayúsculas solo y no deja meter letras donde van números.</p>
+        </div>
+      ) : (
+        !completo && <TecladoISO valor={num} onValor={(v) => { setNum(v); setError(null); }} />
+      )}
 
-      {completo && (
+      {(completo || enVentana) && (
         <div className="l-opc">
           <button type="button" onClick={() => setHoja("temp")}>
             {temp !== null ? `🌡 ${formatearC(temp)} °C` : "+ Añadir temperatura"}
@@ -128,7 +150,9 @@ export function Llegada({ vista, zonas, posicionId, onListo, onCancelar }: {
           <button type="button" onClick={() => setHoja("datos")}>
             {opcionales.length > (temp !== null ? 1 : 0) ? "✎ Producto, sello, estado" : "+ Producto, sello, estado"}
           </button>
-          <button type="button" className="l-borrar" onClick={() => setNum("")}>Cambiar el número</button>
+          {!enVentana && (
+            <button type="button" className="l-borrar" onClick={() => setNum("")}>Cambiar el número</button>
+          )}
         </div>
       )}
 
@@ -148,8 +172,14 @@ export function Llegada({ vista, zonas, posicionId, onListo, onCancelar }: {
         <button type="button" className="btn btn-sec btn-ch" onClick={onCancelar}>Cancelar</button>
       </div>
 
-      {hoja === "temp" && <HojaTemperatura inicial={temp} onCerrar={() => setHoja(null)}
-        onGuardar={(t) => { setTemp(t); setHoja(null); }} />}
+      {hoja === "temp" && (
+        <HojaTemperatura
+          titulo="Temperatura de llegada"
+          texto="Es opcional: los contenedores suelen llegar vacíos y apagados."
+          inicial={temp} permitirSin
+          onCerrar={() => setHoja(null)}
+          onGuardar={(t) => { setTemp(t); setHoja(null); }} />
+      )}
 
       {hoja === "datos" && (
         <div className="velo" onClick={() => setHoja(null)}>
@@ -172,47 +202,6 @@ export function Llegada({ vista, zonas, posicionId, onListo, onCancelar }: {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function HojaTemperatura({ inicial, onGuardar, onCerrar }: {
-  inicial: number | null; onGuardar: (t: number | null) => void; onCerrar: () => void;
-}) {
-  const [valor, setValor] = useState(inicial === null ? "" : String(Math.abs(inicial)).replace(".", ","));
-  const [negativo, setNegativo] = useState(inicial === null ? true : inicial < 0);
-  const [confirmar, setConfirmar] = useState(false);
-  const n = aNumero(valor, negativo);
-  const r = n === null ? null : rango(n);
-  return (
-    <div className="velo" onClick={onCerrar}>
-      <div className="hoja" onClick={(e) => e.stopPropagation()}>
-        <h2>Temperatura de llegada</h2>
-        <p>Es opcional: los contenedores suelen llegar vacíos y apagados.</p>
-        <div className={"mini-lector " + (r ?? "")}>
-          <span className="v">{mostrarValor(valor, negativo)}</span>
-          <span className="u">°C</span>
-          {valor && (
-            <button type="button" onClick={() => setValor(valor.slice(0, -1))}
-              style={{ background: "none", border: 0, fontSize: 16, color: "var(--tinta3)" }} aria-label="Borrar">⌫</button>
-          )}
-          <span className="e">{r ? `${ICONO[r]} ${ETIQUETA[r]}` : ""}</span>
-        </div>
-        <Teclado valor={valor} onValor={setValor} negativo={negativo} onSigno={() => setNegativo((x) => !x)} />
-        {confirmar && n !== null && (
-          <div className="aviso"><b>¿{formatearC(n)} °C es correcto?</b>
-            <p>Ese valor es poco probable para un contenedor refrigerado.</p></div>
-        )}
-        <button type="button" className="btn btn-pri" disabled={n === null}
-          onClick={() => {
-            if (n === null) return;
-            if (esImprobable(n) && !confirmar) { setConfirmar(true); return; }
-            onGuardar(n);
-          }}>
-          {confirmar ? `Sí, guardar ${n !== null ? formatearC(n) : ""} °C` : "Guardar temperatura"}
-        </button>
-        <button type="button" className="btn btn-sec btn-ch" onClick={() => onGuardar(null)}>Sin temperatura</button>
-      </div>
     </div>
   );
 }

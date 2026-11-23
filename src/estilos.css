@@ -544,3 +544,75 @@ tr.calc td{font-weight:700;background:var(--sup2)}
   border:1px solid var(--avi-bor);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--avi);font-weight:650}
 .prueba-cinta button{margin-left:auto;background:none;border:0;color:var(--avi);font-size:11px;
   font-weight:700;text-decoration:underline;padding:2px 4px}
+
+/* el gráfico nunca se estira: con 6 puntos repartidos en un metro no dice nada */
+.graf{max-width:420px;margin-left:auto;margin-right:auto}
+.graf .pt-futuro{fill:var(--borde)}
+.desplegable{border:1px solid var(--borde);background:var(--sup2);border-radius:8px;padding:0 11px;
+  min-height:42px;width:100%;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:650;
+  color:var(--tinta2);text-align:left}
+.desplegable .flecha{margin-left:auto;transition:transform .18s ease;font-size:11px}
+.desplegable[aria-expanded="true"] .flecha{transform:rotate(180deg)}
+
+.btn-temp{margin-left:auto;background:var(--acento-btn);color:#fff;border:0;border-radius:999px;
+  padding:0 12px;min-height:36px;font-size:12px;font-weight:700;white-space:nowrap}
+.btn-temp:hover{filter:brightness(1.08)}
+
+/* ---------- vistazo al pasar el mouse (PC) ---------- */
+.vistazo{position:fixed;z-index:80;background:var(--sup);border:1px solid var(--borde);
+  border-left:4px solid var(--libre-pl);border-radius:10px;padding:9px 11px;pointer-events:none;
+  box-shadow:0 10px 30px rgba(10,16,26,.28);display:flex;flex-direction:column;gap:3px}
+.vistazo.correcto{border-left-color:var(--ok-pl)} .vistazo.urgencia{border-left-color:var(--avi-pl)}
+.vistazo.alerta{border-left-color:var(--ale-pl)} .vistazo.enfriando{border-left-color:var(--frio-pl)}
+.vistazo.cargando{border-left-color:var(--carga-pl)} .vistazo.vacio{border-left-color:var(--vacio-pl)}
+.vistazo.codigo{border-left-color:var(--nul-pl)}
+.vistazo-cab{display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.vistazo-sin{font-size:9px;font-weight:700;color:var(--acento-tinta)}
+.vistazo-ubi{font-size:10.5px;color:var(--tinta3);font-weight:650;text-transform:uppercase;letter-spacing:.05em}
+.vistazo-temp{display:flex;align-items:baseline;gap:7px;margin-top:4px;padding-top:4px;border-top:1px solid var(--borde)}
+.vistazo-temp b{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.vistazo-temp span{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.vistazo-temp i{margin-left:auto;font-style:normal;font-size:10px;color:var(--tinta3);font-variant-numeric:tabular-nums}
+.vistazo.correcto .vistazo-temp b,.vistazo.correcto .vistazo-temp span{color:var(--ok)}
+.vistazo.urgencia .vistazo-temp b,.vistazo.urgencia .vistazo-temp span{color:var(--avi)}
+.vistazo.alerta .vistazo-temp b,.vistazo.alerta .vistazo-temp span{color:var(--ale)}
+.vistazo.enfriando .vistazo-temp b,.vistazo.enfriando .vistazo-temp span{color:var(--frio)}
+.vistazo.cargando .vistazo-temp b,.vistazo.cargando .vistazo-temp span{color:var(--carga)}
+.vistazo.vacio .vistazo-temp b,.vistazo.vacio .vistazo-temp span{color:var(--tinta3)}
+.vistazo-dl{display:grid;grid-template-columns:auto 1fr;gap:1px 10px;font-size:11px;margin:5px 0 0}
+.vistazo-dl dt{color:var(--tinta3);font-weight:600}
+.vistazo-dl dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.vistazo-pie{font-size:9.5px;color:var(--tinta3);margin-top:5px;text-align:center}
+@media (hover: none){ .vistazo{display:none} }
+
+/* ---------- ventana pequeña en PC ---------- */
+.ventana-velo{position:fixed;inset:0;background:rgba(8,14,22,.5);display:flex;align-items:center;
+  justify-content:center;z-index:70;padding:20px}
+.ventana{background:var(--sup2);border:1px solid var(--borde);border-radius:14px;width:min(540px,100%);
+  max-height:min(86vh,760px);overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4);
+  padding:12px;display:flex;flex-direction:column;gap:8px}
+.ventana-cab{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.ventana-cab b{font-size:14px;color:var(--tinta2);text-transform:uppercase;letter-spacing:.07em;margin-right:auto}
+.ventana-cab button{background:none;border:0;font-size:17px;color:var(--tinta3);padding:2px 6px;line-height:1}
+
+.l-campo input{width:100%;font-family:var(--mono);font-size:21px;font-weight:700;letter-spacing:.12em;
+  text-align:center;text-transform:uppercase;background:var(--sup2);color:var(--tinta);
+  border:1.5px solid var(--acento);border-radius:9px;padding:11px;min-height:52px}
+.l-campo input:focus{outline:2px solid var(--acento);outline-offset:1px}
+.ventana .llegada,.ventana .detalle{height:auto}
+.ventana .l-opc{flex:none}
+
+/* ---------- invitación al recorrido ---------- */
+.invita{flex:none;display:flex;align-items:center;gap:8px;background:var(--acento-sup);
+  border-bottom:1px solid var(--acento);padding:7px max(10px,env(safe-area-inset-left,0px));
+  font-size:12px;color:var(--acento-tinta);font-weight:600}
+.invita span{margin-right:auto}
+.invita button{border:1px solid var(--borde);background:var(--sup);border-radius:999px;padding:5px 11px;
+  font-size:11.5px;font-weight:650;color:var(--tinta2);min-height:32px;white-space:nowrap}
+.invita .si{background:var(--acento-btn);border-color:var(--acento-btn);color:#fff}
+
+/* la fila: el número ocupa su línea y nada lo recorta */
+.f-izq{min-width:0;display:block}
+.f-pos{white-space:normal}
+.f-sin{color:var(--acento-tinta);font-weight:700;margin-left:6px}
+.f-revisar{color:var(--ale);font-weight:700;margin-left:6px}

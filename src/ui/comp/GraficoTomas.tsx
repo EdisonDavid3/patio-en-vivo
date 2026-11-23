@@ -6,6 +6,9 @@ type Props = {
   titulo: string;
   horas: readonly number[];
   tomas: (Lectura | null)[];
+  /** Instante de cada hora fija: lo que todavía no ha llegado no es una toma perdida. */
+  ranuras: number[];
+  ahora: number;
   /** Con producto se colorea por rango; en las demás etapas el color sería una falsa alarma. */
   conAlerta: boolean;
   limites?: { correctoHasta: number; urgenciaHasta: number };
@@ -15,7 +18,9 @@ const W = 330, H = 88, IZQ = 28, DER = 6, ARR = 15, ABA = 13;
 const X0 = IZQ, X1 = W - DER, Y0 = ARR, Y1 = H - ABA;
 
 /** Una línea con un punto por toma y su valor escrito, con las rayas de −18 y −15. */
-export function GraficoTomas({ titulo, horas, tomas, conAlerta, limites }: Props) {
+export function GraficoTomas({ titulo, horas, tomas, ranuras, ahora, conAlerta, limites }: Props) {
+  const yaTocaba = (i: number) => (ranuras[i] ?? 0) <= ahora;
+  const debidas = horas.map((_, i) => i).filter(yaTocaba).length;
   const lim = limites ?? { correctoHasta: -18, urgenciaHasta: -15 };
   const nums = tomas.filter((t): t is Lectura => !!t && t.c !== null).map((t) => t.c!);
   const lo = Math.min(lim.correctoHasta - 4, ...nums) - 1;
@@ -39,7 +44,7 @@ export function GraficoTomas({ titulo, horas, tomas, conAlerta, limites }: Props
     <div className="graf">
       <div className="graf-tit">
         <span>{titulo}</span>
-        <span>{tomas.filter((t) => t).length} de {horas.length}</span>
+        <span>{debidas === 0 ? "aún no toca" : `${tomas.filter((t) => t).length} de ${debidas}`}</span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} role="img"
            aria-label={`${titulo}: ${tomas.filter((t) => t && t.c !== null).length} lecturas`}>
@@ -54,6 +59,8 @@ export function GraficoTomas({ titulo, horas, tomas, conAlerta, limites }: Props
         {tomas.map((t, i) => {
           const cx = x(i);
           if (!t) {
+            // todavía no toca: no es una toma perdida, así que no se dibuja como tal
+            if (!yaTocaba(i)) return <circle key={i} className="pt-futuro" cx={cx} cy={Y1} r={1.6} />;
             return <circle key={i} className="pt-hueco" cx={cx} cy={medio} r={3.6} />;
           }
           if (t.c === null) {

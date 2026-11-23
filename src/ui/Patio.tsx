@@ -38,13 +38,12 @@ export function Fila({ e, destacada, onClick }: { e: EstadoPosicion; destacada?:
       onClick={onClick}
       data-pos={e.posicion.id}
     >
-      <span>
+      <span className="f-izq">
         <Numero numero={e.estadia.numero} />
         <span className="f-pos">
-          {id}<span className="sep">·</span>
-          <span className={"etapa " + etapa}>{ETAPAS[etapa].corto}</span>
-          {e.cuentaEnRonda && !e.medidaEnRonda && <span className="marca">SIN TOMAR</span>}
-          {e.estadia.conAdvertencia && <span className="marca" style={{ color: "var(--ale)", borderColor: "var(--ale)", background: "var(--ale-sup)" }}>REVISAR Nº</span>}
+          {id}<span className="sep">·</span>{ETAPAS[etapa].corto}
+          {e.cuentaEnRonda && !e.medidaEnRonda && <span className="f-sin">● sin tomar</span>}
+          {e.estadia.conAdvertencia && <span className="f-revisar">▲ revisar nº</span>}
         </span>
       </span>
       <span className="f-der">

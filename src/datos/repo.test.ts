@@ -3,7 +3,7 @@ import "fake-indexeddb/auto";
 import { db } from "./db";
 import { sembrar } from "./semilla";
 import { registrarLlegada, mover, reportarSalida, deshacerSalida, vistaPatio, buscar, rondaActual, lecturasDe, ubicacionesDe, guardarLecturaDeRonda, cambiarEtapa, pasarACamara, sacarDeCamara,
-  tiempoPorEtapa, armarReporte, CAMARA_CARGA } from "./repo";
+  tiempoPorEtapa, armarReporte, CAMARA_CARGA, diasConDatos } from "./repo";
 import { instante, duracion } from "../dominio/tiempo";
 import { resumen, type Celda } from "../dominio/calculos";
 
@@ -383,5 +383,33 @@ describe("reporte oficial con etapas (D34 y D35)", () => {
     expect(fila).toBeDefined();
     expect(fila!.estado).toBe("D");
     expect(fila!.salida).toBe(AHORA);
+  });
+});
+
+describe("la demostración trae varios días (modo de prueba)", () => {
+  it("hay al menos cuatro días operativos con lecturas", async () => {
+    await sembrar(AHORA);
+    const dias = await diasConDatos();
+    expect(dias.length).toBeGreaterThanOrEqual(4);
+    expect(dias[0]).toBe("2026-11-14"); // el más nuevo primero
+  });
+
+  it("un día ya cerrado tiene las 12 tomas, no medio gráfico", async () => {
+    await sembrar(AHORA);
+    const rep = await armarReporte("2026-11-12");
+    expect(rep.filas.length).toBeGreaterThan(5);
+    const completas = rep.filas.filter((f) => f.celdas.filter(Boolean).length === 12);
+    expect(completas.length).toBeGreaterThan(3);
+  });
+
+  it("un contenedor enfriando solo lleva unas horas midiéndose, no días", async () => {
+    await sembrar(AHORA);
+    const v = await vistaPatio(AHORA);
+    const enfriando = v.lista.filter((x) => x.etapa === "enfriando");
+    for (const x of enfriando) {
+      const ls = await lecturasDe(x.estadia!.id);
+      expect(ls.length).toBeLessThanOrEqual(12);
+      expect(ls.length).toBeGreaterThan(0);
+    }
   });
 });

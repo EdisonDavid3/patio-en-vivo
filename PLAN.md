@@ -555,6 +555,37 @@ abren esas pantallas por su cuenta para que se vean trabajando.
 **Modo de prueba.** Botón 🧪 en la cabecera: dice que nada es real, repite el tutorial y **reinicia
 la demostración** generando un patio nuevo. Es lo que hay que tocar cuando salga una versión nueva.
 
+## 12.quater Revisión del 23-nov: la PC
+
+El problema de fondo: **en PC se mostraba la pantalla del teléfono estirada**. El detalle medía
+1587 px de alto en una pantalla de 768 y el gráfico 1302 px de ancho — seis puntos repartidos en
+metro y medio no dicen nada.
+
+**Lo que cambia:**
+
+| | |
+|---|---|
+| Pasar el mouse | Tarjeta flotante con lo importante y **sin gráfico**: número, posición, etapa, última temperatura con su hora, producto, sello y tiempo en patio. |
+| Hacer clic | **Ventana pequeña** sobre el plano, que sigue visible detrás. La pantalla completa de detalle queda solo en el teléfono. |
+| El gráfico | **Plegado** por defecto y nunca más ancho de 420 px. |
+| Registrar llegada | **Ventana** con campo de texto normal: en PC se escribe con el teclado del equipo. El teclado en pantalla es solo del teléfono. |
+
+**Un error que explicaba lo de «el gráfico se ve sin sentido»:** a las 9 de la mañana estaba
+dibujando las seis tomas del turno noche como *no realizadas*, cuando todavía no toca medirlas.
+Ahora las tomas futuras no se dibujan como perdidas.
+
+**Lo que faltaba:** no había forma de tomar temperatura fuera de la ronda. Se agregó el botón
+**«🌡 Tomar temperatura»** arriba a la derecha de la tarjeta de detalle. En un contenedor vacío dice
+«Encender y medir» y lo pasa a *enfriando* antes de pedir el valor.
+
+**Modo de prueba:** pasa de 44 horas a **5 días operativos**, para que el selector de día del reporte
+tenga días de verdad y un día cerrado muestre sus 12 tomas.
+
+**El tutorial ya no arranca solo:** se ofrece una vez con una barrita y se repite desde 🧪.
+
+**Cada aparato guarda lo suyo.** Hasta la Fase 1 no hay servidor: lo que se registra en el teléfono
+no aparece en la PC. Ahora la app lo dice.
+
 ## 13. Qué pasa cuando apruebes
 
 1. Creo `CLAUDE.md` con estas decisiones, para no perder el hilo entre sesiones.

@@ -2,26 +2,31 @@ import { useEffect, useState } from "react";
 import type { Lectura, TramoEtapa, Ubicacion, Zona } from "../datos/tipos";
 import type { VistaPatio } from "../datos/repo";
 import {
-  CAMARA_CARGA, cambiarEtapa, corregirEstadia, deshacerSalida, lecturasDe, mover,
+  CAMARA_CARGA, cambiarEtapa, corregirEstadia, deshacerSalida, guardarLecturaDeRonda, lecturasDe, mover,
   pasarACamara, posicionAnteriorLibre, reportarSalida, sacarDeCamara, tiempoPorEtapa,
   tramosEtapaDe, ubicacionesDe,
 } from "../datos/repo";
 import { claseDe, valorDe, ETIQUETA_CLASE, ICONO_CLASE } from "./util";
 import { Numero } from "./comp/Numero";
+import { formatear } from "../dominio/iso6346";
 import { GraficoTomas } from "./comp/GraficoTomas";
+import { HojaTemperatura } from "./comp/HojaTemperatura";
 import { ETAPAS, faltaParaCargar, listoParaCargar, type Etapa } from "../dominio/etapas";
-import { diaOperativo, duracion, fechaCorta, hhmmAmPm, HORAS_FIJAS } from "../dominio/tiempo";
+import { formatearC } from "../dominio/temperatura";
+import { diaOperativo, duracion, fechaCorta, hhmmAmPm, HORAS_FIJAS, ranurasDelDia } from "../dominio/tiempo";
 
 const PRODUCTOS = ["HOSO 20/30", "HOSO 30/40", "HOSO 40/50", "HOSO 50/60", "HLSO 31/40",
                    "HLSO 41/50", "HLSO 61/70", "P&D 51/60", "PUD 71/90", "EZP 41/50"];
 const ESTADOS = ["En espera", "Cargando", "Despachado", "Vacío", "Sin energía"];
 const CERO: Record<Etapa, number> = { vacio: 0, enfriando: 0, cargando: 0, con_producto: 0, despachado: 0 };
 
-type Hoja = null | "camara" | "sacar" | "mover" | "salida" | "corregir" | "historial";
+type Hoja = null | "camara" | "sacar" | "mover" | "salida" | "corregir" | "historial" | "temp";
 
-export function Detalle({ vista, zonas, posicionId, onCerrar, onAviso }: {
+export function Detalle({ vista, zonas, posicionId, onCerrar, onAviso, enVentana }: {
   vista: VistaPatio; zonas: Zona[]; posicionId: string;
   onCerrar: () => void; onAviso: (texto: string, deshacer?: () => void) => void;
+  /** En PC el detalle vive dentro de una ventana pequeña, no en una pantalla entera. */
+  enVentana?: boolean;
 }) {
   const e = vista.porPosicion.get(posicionId);
   const [lecturas, setLecturas] = useState<Lectura[]>([]);
@@ -30,6 +35,7 @@ export function Detalle({ vista, zonas, posicionId, onCerrar, onAviso }: {
   const [tiempos, setTiempos] = useState<Record<Etapa, number>>(CERO);
   const [previa, setPrevia] = useState<string | null>(null);
   const [hoja, setHoja] = useState<Hoja>(null);
+  const [verGrafico, setVerGrafico] = useState(false);
   const [zonaDestino, setZonaDestino] = useState("C");
   const estadiaId = e?.estadia?.id;
 
@@ -51,13 +57,24 @@ export function Detalle({ vista, zonas, posicionId, onCerrar, onAviso }: {
   const zona = zonas.find((z) => z.id === e.posicion.zonaId)!;
   const ahora = Date.now();
   const dia = diaOperativo(ahora);
+  const ranuras = ranurasDelDia(dia);
   const delDia = lecturas.filter((l) => l.dia === dia);
   const serie = Array.from({ length: 12 }, (_, i) => delDia.find((l) => l.indice === i) ?? null);
   const ultimaC = e.ultima?.c ?? null;
   const listo = etapa === "enfriando" && listoParaCargar(ultimaC);
   const falta = etapa === "enfriando" ? faltaParaCargar(ultimaC) : null;
 
+  const debidas = ranuras.filter((ms) => ms <= ahora).length;
   const camara = vista.lista.filter((x) => x.posicion.zonaId === CAMARA_CARGA);
+
+  async function guardarTemperatura(t: number | null) {
+    if (t === null || !e?.estadia) { setHoja(null); return; }
+    await guardarLecturaDeRonda({
+      estadiaId: e.estadia.id, posicionId: e.posicion.id, numero: e.estadia.numero, temperaturaC: t,
+    });
+    setHoja(null);
+    onAviso(`Temperatura guardada: ${formatearC(t)} °C`);
+  }
   const libresCamara = camara.filter((x) => !x.estadia);
 
   async function irACamara() {
@@ -77,6 +94,13 @@ export function Detalle({ vista, zonas, posicionId, onCerrar, onAviso }: {
           <span className={"etapa grande " + etapa}>{regla.nombre}</span>
           {est.conAdvertencia && <span className="etapa grande alerta"
             style={{ background: "var(--ale-sup)", color: "var(--ale)", borderColor: "var(--ale)" }}>Revisar Nº</span>}
+          <button type="button" className="btn-temp" title="Tomar temperatura ahora"
+            onClick={async () => {
+              if (!regla.mide) await cambiarEtapa(est.id, "enfriando");
+              setHoja("temp");
+            }}>
+            🌡 {regla.mide ? "Tomar temperatura" : "Encender y medir"}
+          </button>
         </div>
         <Numero numero={est.numero} tamano="grande" />
         <div className="ubi" style={{ marginTop: 3 }}>{zona.nombre} · {e.posicion.numero}</div>
@@ -127,15 +151,23 @@ export function Detalle({ vista, zonas, posicionId, onCerrar, onAviso }: {
 
       {regla.mide ? (
         <div className="campo">
-          <label>Temperaturas del día operativo</label>
-          <GraficoTomas titulo="Turno día" conAlerta={regla.alerta}
-            horas={HORAS_FIJAS.slice(0, 6)} tomas={serie.slice(0, 6)} />
-          <GraficoTomas titulo="Turno noche" conAlerta={regla.alerta}
-            horas={HORAS_FIJAS.slice(6)} tomas={serie.slice(6)} />
-          <p className="ayuda">
-            Van {delDia.length} de 12 tomas. Toma actual: {hhmmAmPm(vista.ronda.ms)}.
-            {!regla.alerta && " En esta etapa la temperatura se anota pero no genera alerta."}
-          </p>
+          <button type="button" className="desplegable" aria-expanded={verGrafico}
+            onClick={() => setVerGrafico((v) => !v)}>
+            📈 Temperaturas del día · {delDia.length} de {debidas} {debidas === 1 ? "toma" : "tomas"}
+            <span className="flecha">▾</span>
+          </button>
+          {verGrafico && (
+            <>
+              <GraficoTomas titulo="Turno día" conAlerta={regla.alerta} ahora={ahora}
+                horas={HORAS_FIJAS.slice(0, 6)} tomas={serie.slice(0, 6)} ranuras={ranuras.slice(0, 6)} />
+              <GraficoTomas titulo="Turno noche" conAlerta={regla.alerta} ahora={ahora}
+                horas={HORAS_FIJAS.slice(6)} tomas={serie.slice(6)} ranuras={ranuras.slice(6)} />
+              <p className="ayuda">
+                Toma actual: {hhmmAmPm(vista.ronda.ms)}.
+                {!regla.alerta && " En esta etapa la temperatura se anota pero no genera alerta."}
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className="campo">
@@ -175,6 +207,16 @@ export function Detalle({ vista, zonas, posicionId, onCerrar, onAviso }: {
       </div>
 
       <button type="button" className="btn btn-sec btn-ch" onClick={onCerrar}>Volver al patio</button>
+
+      {hoja === "temp" && (
+        <HojaTemperatura
+          titulo="Tomar temperatura"
+          texto={`${formatear(est.numero)} · ${zona.nombre} ${e.posicion.numero}. Se guarda en la toma de las ${hhmmAmPm(vista.ronda.ms)}.`
+            + (e.ultima?.c != null ? ` La anterior marcó ${formatearC(e.ultima.c)} °C a las ${hhmmAmPm(e.ultima.tomadaMs)}.` : "")}
+          inicial={null}
+          onCerrar={() => setHoja(null)}
+          onGuardar={(t) => void guardarTemperatura(t)} />
+      )}
 
       {hoja === "camara" && (
         <div className="velo" onClick={() => setHoja(null)}>

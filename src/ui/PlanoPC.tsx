@@ -2,7 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { EstadoPosicion, Zona } from "../datos/tipos";
 import type { VistaPatio } from "../datos/repo";
 import { COLS_PC, GRUPOS } from "../datos/zonas";
-import { claseDe, valorDe } from "./util";
+import { claseDe, valorDe, ETIQUETA_CLASE, ICONO_CLASE } from "./util";
+import { Numero } from "./comp/Numero";
+import { ETAPAS } from "../dominio/etapas";
+import { duracion } from "../dominio/tiempo";
 import { hhmmAmPm } from "../dominio/tiempo";
 
 type Filtro = { alertas: boolean; pendientes: boolean };
@@ -12,8 +15,11 @@ function pasa(e: EstadoPosicion, f: Filtro) {
   return true;
 }
 
-function Tabla({ zona, filas, filtro, onPosicion }: {
+type Vistazo = { e: EstadoPosicion; x: number; y: number };
+
+function Tabla({ zona, filas, filtro, onPosicion, onVistazo }: {
   zona: Zona; filas: EstadoPosicion[]; filtro: Filtro; onPosicion: (id: string) => void;
+  onVistazo: (v: Vistazo | null) => void;
 }) {
   const cols = COLS_PC[zona.id] ?? 1;
   const porCol = Math.ceil(filas.length / cols);
@@ -42,6 +48,9 @@ function Tabla({ zona, filas, filtro, onPosicion }: {
                 return (
                   <tr key={e.posicion.id} className={cl + (vis ? "" : " apagado")}
                       onClick={() => e.estadia && onPosicion(e.posicion.id)}
+                      onMouseEnter={(ev) => e.estadia && onVistazo({ e, x: ev.clientX, y: ev.clientY })}
+                      onMouseMove={(ev) => e.estadia && onVistazo({ e, x: ev.clientX, y: ev.clientY })}
+                      onMouseLeave={() => onVistazo(null)}
                       style={{ cursor: e.estadia ? "pointer" : "default" }}>
                     <td className="k-nro">{e.posicion.numero}</td>
                     <td className="k-cont">
@@ -67,6 +76,7 @@ export function PlanoPC({ vista, zonas, onPosicion, actualizado }: {
 }) {
   const [filtro, setFiltro] = useState<Filtro>({ alertas: false, pendientes: false });
   const [pleno, setPleno] = useState(false);
+  const [vistazo, setVistazo] = useState<Vistazo | null>(null);
   const lienzo = useRef<HTMLDivElement>(null);
   const plano = useRef<HTMLDivElement>(null);
   const [escala, setEscala] = useState(1);
@@ -110,7 +120,7 @@ export function PlanoPC({ vista, zonas, onPosicion, actualizado }: {
         {GRUPOS.map((g) => (
           <div className="pc-col" key={g}>
             {zonas.filter((z) => z.grupo === g).map((z) => (
-              <Tabla key={z.id} zona={z} filtro={filtro} onPosicion={onPosicion}
+              <Tabla key={z.id} zona={z} filtro={filtro} onPosicion={onPosicion} onVistazo={setVistazo}
                 filas={vista.lista.filter((e) => e.posicion.zonaId === z.id)} />
             ))}
           </div>
@@ -119,11 +129,14 @@ export function PlanoPC({ vista, zonas, onPosicion, actualizado }: {
     </div>
   );
 
+  const tarjeta = vistazo ? <Vistazo360 v={vistazo} zonas={zonas} /> : null;
+
   if (pleno) {
     return (
       <div className="pleno">
         <button type="button" className="salir" onClick={() => setPleno(false)}>Salir de pantalla completa (Esc)</button>
         {hoja}
+        {tarjeta}
       </div>
     );
   }
@@ -150,6 +163,39 @@ export function PlanoPC({ vista, zonas, onPosicion, actualizado }: {
         <span className="vivo"><i />En vivo · {actualizado}</span>
       </div>
       {hoja}
+      {tarjeta}
+    </div>
+  );
+}
+
+/** Al pasar el mouse por una fila: lo importante, sin gráficos. */
+function Vistazo360({ v, zonas }: { v: Vistazo; zonas: Zona[] }) {
+  const { e } = v;
+  if (!e.estadia) return null;
+  const cl = claseDe(e);
+  const zona = zonas.find((z) => z.id === e.posicion.zonaId)!;
+  const ancho = 270, alto = 180;
+  const left = Math.min(v.x + 16, globalThis.innerWidth - ancho - 12);
+  const top = v.y + alto + 24 < globalThis.innerHeight ? v.y + 16 : v.y - alto - 12;
+  return (
+    <div className={"vistazo " + cl} style={{ left, top, width: ancho }} aria-hidden="true">
+      <div className="vistazo-cab">
+        <span className={"etapa " + e.estadia.etapa}>{ETAPAS[e.estadia.etapa].corto}</span>
+        {e.cuentaEnRonda && !e.medidaEnRonda && <span className="vistazo-sin">● sin tomar</span>}
+      </div>
+      <Numero numero={e.estadia.numero} tamano="normal" />
+      <div className="vistazo-ubi">{zona.nombre} · {e.posicion.numero}</div>
+      <div className="vistazo-temp">
+        <b>{valorDe(e)}</b>
+        <span>{ICONO_CLASE[cl]} {ETIQUETA_CLASE[cl]}</span>
+        <i>{e.ultima ? hhmmAmPm(e.ultima.tomadaMs) : "sin lecturas"}</i>
+      </div>
+      <dl className="vistazo-dl">
+        {e.estadia.producto && <><dt>Producto</dt><dd>{e.estadia.producto}</dd></>}
+        {e.estadia.sello && <><dt>Sello</dt><dd>{e.estadia.sello}</dd></>}
+        <dt>En patio</dt><dd>{duracion(e.estadia.entrada, Date.now())}</dd>
+      </dl>
+      <p className="vistazo-pie">Clic para abrirlo</p>
     </div>
   );
 }
