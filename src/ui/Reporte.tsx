@@ -43,6 +43,7 @@ export function Reporte() {
         </select>
         <span style={{ color: "var(--tinta2)" }}>
           Hoja {hoja + 1} de {hojas} · contenedores {hoja * POR_HOJA + 1} a {Math.min((hoja + 1) * POR_HOJA, rep.filas.length)} de {rep.filas.length}
+          {rep.vaciosFuera > 0 && ` · ${rep.vaciosFuera} vacíos fuera de la hoja`}
         </span>
         <button type="button" disabled={hoja === 0} onClick={() => setHoja((h) => h - 1)}>‹ Anterior</button>
         <button type="button" disabled={hoja >= hojas - 1} onClick={() => setHoja((h) => h + 1)}>Siguiente ›</button>
@@ -87,7 +88,7 @@ export function Reporte() {
               <tr><td className="et">Ubicación</td>{filas.map((f) => <td key={f.estadiaId}>{f.ubicacion}</td>)}{relleno(filas.length)}</tr>
               <tr><td className="et">Producto</td>{filas.map((f) => <td key={f.estadiaId}>{f.producto || "—"}</td>)}{relleno(filas.length)}</tr>
               <tr><td className="et">Sello</td>{filas.map((f) => <td key={f.estadiaId}>{f.sello || "—"}</td>)}{relleno(filas.length)}</tr>
-              <tr><td className="et">Estado</td>{filas.map((f) => <td key={f.estadiaId}>{f.estado || "—"}</td>)}{relleno(filas.length)}</tr>
+              <tr><td className="et">Estado</td>{filas.map((f) => <td key={f.estadiaId}>{f.estado}</td>)}{relleno(filas.length)}</tr>
               <tr><td className="et">Hora ingreso</td>
                 {filas.map((f) => <td key={f.estadiaId}>{f.ingreso ? hhmm(f.ingreso) : "—"}</td>)}{relleno(filas.length)}</tr>
               <tr><td className="et">Hora salida</td>
@@ -108,7 +109,9 @@ export function Reporte() {
                       return <td key={f.estadiaId} className={pendiente ? "" : "v-sin"}>{pendiente ? "" : "—"}</td>;
                     }
                     if ("codigo" in c) return <td key={f.estadiaId} className="v-codigo">{c.codigo}</td>;
-                    return <td key={f.estadiaId} className={"v-" + rango(c.c)}>{formatearC(c.c)}</td>;
+                    // D35: solo se encierra en rojo lo que de verdad incumple
+                    const cls = f.vigilada ? "v-" + rango(c.c) : "v-neutra";
+                    return <td key={f.estadiaId} className={cls}>{formatearC(c.c)}</td>;
                   })}
                   {relleno(filas.length)}
                 </tr>
@@ -125,6 +128,7 @@ export function Reporte() {
           <div className="hoja-ley">
             Leyenda ESTADO / lecturas: C = Cargando · D = Despachado · E = En espera · SE = Sin energía · V = Vacío ·
             Se usa el código en la celda cuando no se pudo tomar la lectura.
+            {rep.vaciosFuera > 0 && ` · Además hay ${rep.vaciosFuera} contenedor${rep.vaciosFuera === 1 ? "" : "es"} vacío${rep.vaciosFuera === 1 ? "" : "s"} en el patio, sin temperatura que registrar.`}
           </div>
           <div className="hoja-pie">
             <div>

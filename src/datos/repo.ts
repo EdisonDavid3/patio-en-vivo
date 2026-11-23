@@ -371,7 +371,11 @@ export type FilaReporte = {
   ubicacion: string;
   producto: string;
   sello: string;
+  /** Letra del formato oficial según la etapa: V, C, E o D. */
   estado: string;
+  etapa: Etapa;
+  /** D35: solo las filas vigiladas (con producto) llevan las lecturas encerradas en rojo. */
+  vigilada: boolean;
   ingreso: number | null;
   salida: number | null;
   celdas: Celda[];
@@ -383,6 +387,8 @@ export type Reporte = {
   filas: FilaReporte[];
   observaciones: { ms: number; texto: string }[];
   responsables: { dia: string; noche: string };
+  /** D34: los vacíos no salen en la hoja; su cantidad se anota al pie. */
+  vaciosFuera: number;
 };
 
 const ORDEN_ZONAS = ["E1", "E2", "C", "B", "OF", "A", "PN"];
@@ -416,7 +422,14 @@ export async function armarReporte(dia: string): Promise<Reporte> {
     if (a) a.push(l); else porEstadia.set(l.estadiaId, [l]);
   }
 
-  const filas: FilaReporte[] = presentes.map((e) => {
+  // D34: la hoja lleva solo los contenedores que se miden. Los que ya salieron
+  // entran igual si ese día dejaron lecturas.
+  const enLaHoja = presentes.filter(
+    (e) => ETAPAS[e.etapa].mide || (porEstadia.get(e.id)?.length ?? 0) > 0,
+  );
+  const vaciosFuera = presentes.length - enLaHoja.length;
+
+  const filas: FilaReporte[] = enLaHoja.map((e) => {
     const tramos = ubicaciones
       .filter((x) => x.estadiaId === e.id && x.desde <= fin && (x.hasta === null || x.hasta >= inicio))
       .sort((a, b) => a.desde - b.desde);
@@ -429,13 +442,17 @@ export async function armarReporte(dia: string): Promise<Reporte> {
       if (l.codigo) return { codigo: l.codigo };
       return null;
     });
+    const regla = ETAPAS[e.etapa];
     return {
       estadiaId: e.id,
       numero: e.numero,
       ubicacion: posicionId.replace("-", " "),
       producto: e.producto,
       sello: e.sello,
-      estado: e.estado,
+      // «Enfriando» no tiene código en la norma: sigue estando vacío, así que va como V
+      estado: regla.codigoOficial ?? ETAPAS.vacio.codigoOficial!,
+      etapa: e.etapa,
+      vigilada: regla.alerta,
       ingreso: e.entrada >= inicio && e.entrada <= fin ? e.entrada : null,
       salida: e.salida !== null && e.salida >= inicio && e.salida <= fin ? e.salida : null,
       celdas,
@@ -445,14 +462,22 @@ export async function armarReporte(dia: string): Promise<Reporte> {
 
   filas.sort((a, b) => ordenPosicion(a.ubicacion.replace(" ", "-")) - ordenPosicion(b.ubicacion.replace(" ", "-")));
 
-  // observaciones del día: lo que se salió de rango y lo que no se pudo medir
+  // observaciones del día
   const observaciones: { ms: number; texto: string }[] = [];
+  const vigiladaPorEstadia = new Map(filas.map((f) => [f.estadiaId, f.vigilada]));
+  const enfriandoAnotados = new Set<string>();
   for (const l of lecturas) {
     const pos = l.posicionId.replace("-", " ");
+    const fila = filas.find((f) => f.estadiaId === l.estadiaId);
+    if (!fila) continue;
     if (l.codigo) {
       const nombre = { C: "cargando", D: "despachado", E: "en espera", SE: "sin energía", V: "vacío" }[l.codigo];
       observaciones.push({ ms: l.tomadaMs, texto: `${pos} · ${nombre} al momento de la toma.` });
-    } else if (l.c !== null && l.c > -15) {
+    } else if (fila.etapa === "enfriando" && !enfriandoAnotados.has(l.estadiaId)) {
+      // D35: no es incumplimiento, es un contenedor bajando temperatura antes de cargar
+      enfriandoAnotados.add(l.estadiaId);
+      observaciones.push({ ms: l.tomadaMs, texto: `${pos} · en enfriamiento antes de cargar; las lecturas van bajando.` });
+    } else if (l.c !== null && l.c > -15 && vigiladaPorEstadia.get(l.estadiaId)) {
       observaciones.push({ ms: l.tomadaMs, texto: `${pos} · marcó ${l.c.toFixed(1)} °C, fuera de rango. Se avisó a mantenimiento.` });
     }
   }
@@ -470,6 +495,7 @@ export async function armarReporte(dia: string): Promise<Reporte> {
     filas,
     observaciones: observaciones.slice(0, 8),
     responsables: { dia: u.nombre, noche: "Luis Mendoza" },
+    vaciosFuera,
   };
 }
 

@@ -4,8 +4,9 @@ import type { VistaPatio } from "../datos/repo";
 import { registrarLlegada } from "../datos/repo";
 import { db } from "../datos/db";
 import { Teclado } from "./comp/Teclado";
+import { TecladoISO, NumeroEnProceso } from "./comp/TecladoISO";
 import { aNumero, mostrarValor } from "./util";
-import { normalizar, validar } from "../dominio/iso6346";
+import { validar } from "../dominio/iso6346";
 import { ETIQUETA, ICONO, esImprobable, formatearC, rango } from "../dominio/temperatura";
 
 const PRODUCTOS = ["HOSO 20/30", "HOSO 30/40", "HOSO 40/50", "HOSO 50/60", "HLSO 31/40",
@@ -17,15 +18,14 @@ export function Llegada({ vista, zonas, posicionId, onListo, onCancelar }: {
   onListo: (posicionId: string) => void; onCancelar: () => void;
 }) {
   const [pos, setPos] = useState<string | null>(posicionId);
-  const [pref, setPref] = useState("");
-  const [serie, setSerie] = useState("");
-  const [valor, setValor] = useState("");
-  const [negativo, setNegativo] = useState(true);
+  const [num, setNum] = useState("");
+  const [temp, setTemp] = useState<number | null>(null);
   const [producto, setProducto] = useState("");
   const [sello, setSello] = useState("");
   const [estado, setEstado] = useState("");
+  const [nota, setNota] = useState("");
+  const [hoja, setHoja] = useState<null | "temp" | "datos">(null);
   const [error, setError] = useState<string | null>(null);
-  const [confirmar, setConfirmar] = useState<number | null>(null);
   const [prefijos, setPrefijos] = useState<string[]>([]);
 
   useEffect(() => { setPos(posicionId); }, [posicionId]);
@@ -33,29 +33,24 @@ export function Llegada({ vista, zonas, posicionId, onListo, onCancelar }: {
     void db.contenedores.toArray().then((cs) => {
       const cuenta = new Map<string, number>();
       for (const c of cs) cuenta.set(c.prefijo, (cuenta.get(c.prefijo) ?? 0) + 1);
-      setPrefijos([...cuenta.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([p]) => p));
+      setPrefijos([...cuenta.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([p]) => p));
     });
   }, []);
 
-  const numeroTexto = normalizar(pref + serie);
-  const revision = useMemo(() => (numeroTexto.length === 11 ? validar(numeroTexto) : null), [numeroTexto]);
-  const temp = aNumero(valor, negativo);
-  const r = temp === null ? null : rango(temp);
+  const revision = useMemo(() => (num.length === 11 ? validar(num) : null), [num]);
+  const completo = num.length === 11;
   const libres = vista.lista.filter((e) => !e.estadia);
 
-  const listo = revision !== null && temp !== null &&
-    (revision.ok || revision.motivo === "verificador") && pos !== null;
-
   async function guardar(forzado = false) {
-    if (!pos || temp === null || !revision) return;
-    if (!revision.ok && revision.motivo === "formato") return;
+    if (!pos || !revision) return;
     if (!revision.ok && !forzado) return;
-    if (esImprobable(temp) && confirmar === null) { setConfirmar(temp); return; }
     const res = await registrarLlegada({
-      posicionId: pos, numero: numeroTexto, temperaturaC: temp,
+      posicionId: pos, numero: num,
+      ...(temp !== null ? { temperaturaC: temp } : {}),
       conAdvertencia: !revision.ok, producto, sello, estado,
     });
     if (!res.ok) { setError(res.error); return; }
+    if (nota) await db.estadias.update(res.estadiaId, { nota });
     onListo(pos);
   }
 
@@ -87,44 +82,113 @@ export function Llegada({ vista, zonas, posicionId, onListo, onCancelar }: {
   }
 
   const zonaNombre = zonas.find((z) => z.id === pos.split("-")[0])?.nombre ?? "";
+  const opcionales = [
+    temp !== null ? `${formatearC(temp)} °C` : null,
+    producto || null, sello || null, estado || null, nota ? "nota" : null,
+  ].filter(Boolean);
 
   return (
-    <>
-      <div className="campo">
-        <label>Ubicación</label>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <b style={{ fontSize: 19 }}>{zonaNombre} · {pos.split("-")[1]}</b>
-          <button type="button" className="btn btn-sec btn-ch" style={{ marginLeft: "auto", minHeight: 34 }}
-            onClick={() => setPos(null)}>Cambiar</button>
+    <div className="llegada">
+      <div className="l-ubi">
+        <div>
+          <span className="et">Llega a</span>
+          <b>{zonaNombre} · {pos.split("-")[1]}</b>
         </div>
+        <button type="button" onClick={() => setPos(null)}>Cambiar</button>
       </div>
 
-      <div className="campo">
-        <label htmlFor="serie">1 · Número de contenedor <span className="oblig">obligatorio</span></label>
-        <div className={"iso" + (revision ? (revision.ok ? " bien" : " mal") : "")}>
-          <input id="pref" value={pref} inputMode="text" autoCapitalize="characters" maxLength={4}
-            placeholder="MSCU" aria-label="Cuatro letras"
-            onChange={(e) => setPref(e.target.value.replace(/[^a-zA-Z]/g, "").toUpperCase())} />
-          <input id="serie" value={serie} inputMode="numeric" maxLength={7}
-            placeholder="1281608" aria-label="Siete dígitos"
-            onChange={(e) => setSerie(e.target.value.replace(/\D/g, ""))} />
-        </div>
-        {prefijos.length > 0 && pref.length < 4 && (
-          <div className="sug">
-            {prefijos.map((p) => <button key={p} type="button" onClick={() => setPref(p)}>{p}</button>)}
-          </div>
-        )}
-        <p className="ayuda">4 letras + 7 números. Obligatorio y completo.</p>
-        {revision && !revision.ok && (
-          <div className="aviso">
-            <b>▲ {revision.motivo === "formato" ? "Falta parte del número" : "El dígito verificador no cuadra"}</b>
-            <p>{revision.mensaje}</p>
-          </div>
-        )}
+      <div className={"l-num" + (revision ? (revision.ok ? " bien" : " mal") : "")}>
+        <NumeroEnProceso valor={num} />
+        <p className="ayuda" style={{ textAlign: "center", marginTop: 2 }}>
+          {num.length < 4 ? "4 letras y luego 7 números" : `${num.length} de 11`}
+        </p>
       </div>
 
-      <div className="campo">
-        <label>2 · Temperatura de llegada <span className="oblig">obligatoria</span></label>
+      {num.length < 4 && prefijos.length > 0 && (
+        <div className="sug">
+          {prefijos.map((p) => <button key={p} type="button" onClick={() => setNum(p)}>{p}</button>)}
+        </div>
+      )}
+
+      {revision && !revision.ok && (
+        <div className="aviso">
+          <b>▲ El dígito verificador no cuadra</b>
+          <p>{revision.mensaje}</p>
+        </div>
+      )}
+      {error && <div className="aviso"><b>No se pudo guardar</b><p>{error}</p></div>}
+
+      {!completo && <TecladoISO valor={num} onValor={(v) => { setNum(v); setError(null); }} />}
+
+      {completo && (
+        <div className="l-opc">
+          <button type="button" onClick={() => setHoja("temp")}>
+            {temp !== null ? `🌡 ${formatearC(temp)} °C` : "+ Añadir temperatura"}
+          </button>
+          <button type="button" onClick={() => setHoja("datos")}>
+            {opcionales.length > (temp !== null ? 1 : 0) ? "✎ Producto, sello, estado" : "+ Producto, sello, estado"}
+          </button>
+          <button type="button" className="l-borrar" onClick={() => setNum("")}>Cambiar el número</button>
+        </div>
+      )}
+
+      <div className="l-pie">
+        {revision && !revision.ok ? (
+          <>
+            <button type="button" className="btn btn-rojo" onClick={() => void guardar(true)}>
+              Revisé y está bien, guardar igual
+            </button>
+            <p className="ayuda" style={{ textAlign: "center" }}>Queda marcado en rojo para el supervisor.</p>
+          </>
+        ) : (
+          <button type="button" className="btn btn-pri" disabled={!completo} onClick={() => void guardar()}>
+            Registrar llegada
+          </button>
+        )}
+        <button type="button" className="btn btn-sec btn-ch" onClick={onCancelar}>Cancelar</button>
+      </div>
+
+      {hoja === "temp" && <HojaTemperatura inicial={temp} onCerrar={() => setHoja(null)}
+        onGuardar={(t) => { setTemp(t); setHoja(null); }} />}
+
+      {hoja === "datos" && (
+        <div className="velo" onClick={() => setHoja(null)}>
+          <div className="hoja" onClick={(e) => e.stopPropagation()}>
+            <h2>Datos del formato</h2>
+            <p>Todos opcionales. Se pueden llenar después desde el detalle del contenedor.</p>
+            <div className="campos-opc">
+              <select value={producto} onChange={(e) => setProducto(e.target.value)} aria-label="Producto">
+                <option value="">Producto…</option>
+                {PRODUCTOS.map((p) => <option key={p}>{p}</option>)}
+              </select>
+              <input value={sello} placeholder="Sello" aria-label="Sello" onChange={(e) => setSello(e.target.value)} />
+              <select value={estado} onChange={(e) => setEstado(e.target.value)} aria-label="Estado">
+                <option value="">Estado…</option>
+                {ESTADOS.map((p) => <option key={p}>{p}</option>)}
+              </select>
+              <input value={nota} placeholder="Nota" aria-label="Nota" onChange={(e) => setNota(e.target.value)} />
+            </div>
+            <button type="button" className="btn btn-pri" onClick={() => setHoja(null)}>Listo</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HojaTemperatura({ inicial, onGuardar, onCerrar }: {
+  inicial: number | null; onGuardar: (t: number | null) => void; onCerrar: () => void;
+}) {
+  const [valor, setValor] = useState(inicial === null ? "" : String(Math.abs(inicial)).replace(".", ","));
+  const [negativo, setNegativo] = useState(inicial === null ? true : inicial < 0);
+  const [confirmar, setConfirmar] = useState(false);
+  const n = aNumero(valor, negativo);
+  const r = n === null ? null : rango(n);
+  return (
+    <div className="velo" onClick={onCerrar}>
+      <div className="hoja" onClick={(e) => e.stopPropagation()}>
+        <h2>Temperatura de llegada</h2>
+        <p>Es opcional: los contenedores suelen llegar vacíos y apagados.</p>
         <div className={"mini-lector " + (r ?? "")}>
           <span className="v">{mostrarValor(valor, negativo)}</span>
           <span className="u">°C</span>
@@ -134,56 +198,21 @@ export function Llegada({ vista, zonas, posicionId, onListo, onCancelar }: {
           )}
           <span className="e">{r ? `${ICONO[r]} ${ETIQUETA[r]}` : ""}</span>
         </div>
-        <Teclado compacto valor={valor} onValor={setValor} negativo={negativo} onSigno={() => setNegativo((n) => !n)} />
-        <p className="ayuda">El signo menos ya viene puesto: escribe «19» y se guarda −19.</p>
-      </div>
-
-      <div className="campo">
-        <label>3 · Opcionales · se pueden llenar después</label>
-        <div className="campos-opc">
-          <select value={producto} onChange={(e) => setProducto(e.target.value)} aria-label="Producto">
-            <option value="">Producto…</option>
-            {PRODUCTOS.map((p) => <option key={p}>{p}</option>)}
-          </select>
-          <input value={sello} placeholder="Sello" aria-label="Sello" onChange={(e) => setSello(e.target.value)} />
-          <select value={estado} onChange={(e) => setEstado(e.target.value)} aria-label="Estado">
-            <option value="">Estado…</option>
-            {ESTADOS.map((p) => <option key={p}>{p}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {error && <div className="aviso"><b>No se pudo guardar</b><p>{error}</p></div>}
-
-      {revision && !revision.ok && revision.motivo === "verificador" ? (
-        <>
-          <button type="button" className="btn btn-pri" onClick={() => { setSerie(""); setError(null); }}>
-            Corregir el número
-          </button>
-          <button type="button" className="btn btn-rojo" disabled={temp === null} onClick={() => void guardar(true)}>
-            Revisé y está bien, guardar igual
-          </button>
-          <p className="ayuda" style={{ textAlign: "center" }}>
-            Queda marcado en rojo en el plano para que el supervisor lo revise.
-          </p>
-        </>
-      ) : (
-        <button type="button" className="btn btn-pri" disabled={!listo} onClick={() => void guardar()}>
-          Registrar llegada
+        <Teclado valor={valor} onValor={setValor} negativo={negativo} onSigno={() => setNegativo((x) => !x)} />
+        {confirmar && n !== null && (
+          <div className="aviso"><b>¿{formatearC(n)} °C es correcto?</b>
+            <p>Ese valor es poco probable para un contenedor refrigerado.</p></div>
+        )}
+        <button type="button" className="btn btn-pri" disabled={n === null}
+          onClick={() => {
+            if (n === null) return;
+            if (esImprobable(n) && !confirmar) { setConfirmar(true); return; }
+            onGuardar(n);
+          }}>
+          {confirmar ? `Sí, guardar ${n !== null ? formatearC(n) : ""} °C` : "Guardar temperatura"}
         </button>
-      )}
-      <button type="button" className="btn btn-sec btn-ch" onClick={onCancelar}>Cancelar</button>
-
-      {confirmar !== null && (
-        <div className="velo" onClick={() => setConfirmar(null)}>
-          <div className="hoja" onClick={(e) => e.stopPropagation()}>
-            <h2>¿{formatearC(confirmar)} °C es correcto?</h2>
-            <p>Ese valor es poco probable para un contenedor refrigerado.</p>
-            <button type="button" className="btn btn-pri" onClick={() => void guardar(true)}>Sí, guardar</button>
-            <button type="button" className="btn btn-sec" onClick={() => setConfirmar(null)}>Volver a escribirlo</button>
-          </div>
-        </div>
-      )}
-    </>
+        <button type="button" className="btn btn-sec btn-ch" onClick={() => onGuardar(null)}>Sin temperatura</button>
+      </div>
+    </div>
   );
 }

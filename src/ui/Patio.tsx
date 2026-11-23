@@ -7,7 +7,6 @@ import { claseDe, ETIQUETA_CLASE, ICONO_CLASE, valorDe } from "./util";
 import { Numero } from "./comp/Numero";
 import { hhmmAmPm } from "../dominio/tiempo";
 import { ETAPAS } from "../dominio/etapas";
-import { reiniciarDemo } from "../datos/semilla";
 
 type Filtro = { alertas: boolean; pendientes: boolean };
 
@@ -62,7 +61,6 @@ export function Patio({ vista, zonas, onPosicion, destacada }: {
   const [activa, setActiva] = useState("C");
   const [filtro, setFiltro] = useState<Filtro>({ alertas: false, pendientes: false });
   const [compacto, setCompacto] = useState(false);
-  const [confirmar, setConfirmar] = useState(false);
   const toque = useRef<{ x: number; y: number } | null>(null);
   const hayFiltro = filtro.alertas || filtro.pendientes;
 
@@ -169,27 +167,9 @@ export function Patio({ vista, zonas, onPosicion, destacada }: {
               <Fila key={e.posicion.id} e={e} destacada={destacada === e.posicion.id}
                 onClick={() => onPosicion(e.posicion.id)} />
             ))}
-        <button type="button" className="reinicia" onClick={() => setConfirmar(true)}>
-          Datos de demostración · volver a generarlos
-        </button>
       </div>
 
-      {confirmar && (
-        <div className="velo" onClick={() => setConfirmar(false)}>
-          <div className="hoja" onClick={(ev) => ev.stopPropagation()}>
-            <h2>¿Volver a generar la demostración?</h2>
-            <p>
-              Borra lo que hayas registrado en este teléfono y arma un patio nuevo con datos
-              ficticios. Úsalo cuando salga una versión nueva de la app.
-            </p>
-            <button type="button" className="btn btn-pri"
-              onClick={async () => { await reiniciarDemo(); setConfirmar(false); }}>
-              Sí, generar datos nuevos
-            </button>
-            <button type="button" className="btn btn-sec" onClick={() => setConfirmar(false)}>Cancelar</button>
-          </div>
-        </div>
-      )}
+
     </>
   );
 }

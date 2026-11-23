@@ -62,6 +62,10 @@ Documento maestro del plan: `PLAN.md`. Formatos originales en `docs/formatos/`.
 | D33 | **Las etapas son casi exactamente los códigos del formato oficial**: vacío=**V**, cargando=**C**, con producto=**E**, despachado=**D**. **«Enfriando» no tiene código en la norma** (ver sección «Etapas y el formato oficial»). *SE* no es una etapa: es el motivo de una toma fallida. | 14-nov |
 | D34 | **La hoja oficial lleva solo los contenedores que se miden** (enfriando, cargando, con producto). Los vacíos no salen: no tendrían nada que registrar. Si hace falta, su cantidad va en una línea del pie. | 14-nov |
 | D35 | **Las lecturas de «enfriando» no se encierran en rojo**: en esa etapa la temperatura es información, no incumplimiento. Salen con su número normal y se anota «en enfriamiento» en Observaciones. | 14-nov |
+| D36 | **Ronda sin efecto túnel**: arriba la lista de la sección —la ya medida con su valor, la actual resaltada y las siguientes—; abajo el teclado fijo. Al guardar **solo baja el resaltado** y la lista se mueve lo mínimo (`scrollIntoView` con `block:"nearest"`). Tocar cualquier fila salta a ese contenedor. En PC el teclado no se estira: lista a la izquierda, teclado de 320 px a la derecha, todo en 940 px centrados. | 23-nov |
+| D37 | **Llegada de una sola pasada** con **teclado propio en pantalla**: el del teléfono no cambia de letras a números de forma fiable. Un campo de 11 caracteres con el formato visual «MSCU 128160 8» y lo que falta en guiones bajos; tras la cuarta letra el teclado pasa solo a números. Temperatura, producto, sello, estado y nota **plegados en hojas**. | 23-nov |
+| D38 | **Modo tutorial lúdico**: 12 pasos con foco sobre la parte que explica, burbuja con emoji, puntos de avance y salida en cualquier momento. Arranca solo la primera vez (marca en `localStorage`) y se repite desde el botón 🧪. Los pasos que necesitan una pantalla abierta (ronda, llegada) la abren ellos mismos con `prepara`. | 23-nov |
+| D39 | **Botón 🧪 Modo de prueba** en la cabecera: explica que nada es real, repite el tutorial y **reinicia el modo de prueba** (regenera los datos). Reemplaza al botón que estaba al final de la lista del patio. | 23-nov |
 
 ## Estado
 **Fase 0 construida, probada y subida** (14-nov). 46 pruebas automáticas en verde; sin desbordes ni
@@ -216,23 +220,14 @@ Tienen que cuadrar entre pantallas; se calculan en el navegador desde `_datos.js
 10:00. El reporte diario es el **día operativo cerrado del 13-nov**; las demás pantallas son el 14-nov
 con la ronda de las 10:00 a medio hacer, y eso se dice en la pantalla.
 
-## Trabajo pendiente de la revisión del 14-nov (tras probar la Fase 0)
-Hecho: etapas (D25–D27, D32–D33), horas a. m./p. m. (D28), contenedor protagonista (D29),
-gráfico de línea (D30), títulos del plano de PC (D31), detalle con los botones de etapa.
-**Falta, aprobado pero sin construir:**
-- **Ronda sin efecto túnel**: arriba la lista de la sección con 3 o 4 filas (la anterior ya medida
-  con su valor, la actual resaltada, las siguientes); abajo el teclado fijo. Al guardar **solo baja
-  el resaltado**, la pantalla no cambia ni salta. Tocar cualquier fila lleva a ese contenedor.
-  Debe seguir cabiendo en 360×640 sin deslizar. En PC/tablet el teclado no se estira a todo el
-  ancho: lista a la izquierda y teclado a la derecha, o un ancho máximo centrado.
-- **Registrar llegada de una sola pasada**: un solo campo de 11 caracteres que pase solo de letras
-  a números tras la cuarta letra, en mayúsculas, con el formato visual «MSCU 128160 8»; los botones
-  de prefijo llenan las 4 letras; si cambiar el teclado del teléfono no es fiable, teclado propio en
-  pantalla. Temperatura, Producto, Sello, Estado y Nota **plegados** («+ Añadir temperatura»).
-  La pantalla debe caber en 360×640: posición, número y «Registrar llegada».
-- **Reporte de tiempo en patio**: mostrar el tiempo por etapa (ya se guarda en `tramosEtapa`).
-- **Reporte oficial según D34 y D35**: filtrar a los contenedores que se miden, marcar «enfriando»
-  como **V** en ESTADO y no encerrar en rojo sus lecturas ni las de «cargando».
+## Estado del trabajo pedido tras probar la Fase 0
+**Todo hecho** (14 y 23-nov): etapas (D25–D27, D32–D34), horas a. m./p. m. (D28), contenedor
+protagonista (D29), gráfico de línea (D30), títulos del plano de PC (D31), detalle con los botones
+de etapa, ronda sin efecto túnel (D36), llegada de una pasada con teclado propio (D37),
+reporte oficial con D34 y D35, tutorial (D38) y modo de prueba (D39).
+
+**Lo único que queda de esa lista:** el **reporte de tiempo en patio** con el desglose por etapa
+(el dato ya se guarda en `tramosEtapa` y se ve en el historial del contenedor). Es de la Fase 2.
 
 ## Regla de arquitectura
 Las pantallas **nunca** tocan Supabase ni IndexedDB directamente. Todo pasa por **una sola capa de datos**,

@@ -8,6 +8,8 @@ import { Ronda } from "./Ronda";
 import { Detalle } from "./Detalle";
 import { Buscar } from "./Buscar";
 import { Reporte } from "./Reporte";
+import { Tutorial, type PantallaTutorial } from "./Tutorial";
+import { reiniciarDemo } from "../datos/semilla";
 import { useAncho, useTema } from "./util";
 import { hhmmAmPm } from "../dominio/tiempo";
 
@@ -27,6 +29,20 @@ export function App() {
   const [destacada, setDestacada] = useState<string | null>(null);
   const [aviso, setAviso] = useState<{ texto: string; deshacer?: () => void } | null>(null);
   const [ahora, setAhora] = useState(() => Date.now());
+  const [tutorial, setTutorial] = useState(false);
+  const [hojaPrueba, setHojaPrueba] = useState(false);
+  const [reiniciando, setReiniciando] = useState(false);
+
+  // la primera vez que alguien abre la app, se le ofrece el recorrido
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("ts-tutorial")) setTutorial(true);
+    } catch { /* almacenamiento bloqueado */ }
+  }, []);
+  function cerrarTutorial() {
+    setTutorial(false);
+    try { localStorage.setItem("ts-tutorial", "visto"); } catch { /* da igual */ }
+  }
   const ancho = useAncho();
   const [tema, alternarTema] = useTema();
 
@@ -85,6 +101,8 @@ export function App() {
           onClick={() => setAviso({ texto: pendientes === 0 ? "Todo enviado" : `${pendientes} registros esperan WiFi` })}>
           <i />{pendientes === 0 ? "Al día" : `${pendientes} pend.`} · {hhmmAmPm(ahora)}
         </button>
+        <button type="button" className="btn-prueba" onClick={() => setHojaPrueba(true)}
+          aria-label="Modo de prueba y tutorial" title="Modo de prueba">🧪</button>
         <button type="button" className="sinc" onClick={alternarTema} aria-label="Cambiar a modo claro u oscuro">
           {tema === "claro" ? "☾" : "☀"}
         </button>
@@ -128,6 +146,47 @@ export function App() {
             </button>
           ))}
         </nav>
+      )}
+
+      {tutorial && (
+        <Tutorial onCerrar={cerrarTutorial} irA={(p: PantallaTutorial) => setPantalla(p)} />
+      )}
+
+      {hojaPrueba && (
+        <div className="velo" onClick={() => setHojaPrueba(false)}>
+          <div className="hoja" onClick={(e) => e.stopPropagation()}>
+            <h2>🧪 Modo de prueba</h2>
+            <p>
+              Estás usando la demostración de la Fase 0. Todo vive dentro de este teléfono:
+              no hay servidor, no hay cuentas y <b>ningún dato es real</b>. Los contenedores son
+              inventados, con números que sí cumplen la norma. Toca lo que quieras sin miedo.
+            </p>
+            <button type="button" className="btn btn-pri"
+              onClick={() => { setHojaPrueba(false); setTutorial(true); }}>
+              ▶ Ver el tutorial otra vez
+            </button>
+            <button type="button" className="btn btn-sec" disabled={reiniciando}
+              onClick={async () => {
+                setReiniciando(true);
+                await reiniciarDemo();
+                setReiniciando(false);
+                setHojaPrueba(false);
+                setPantalla("patio");
+                setAviso({ texto: "Modo de prueba reiniciado" });
+              }}>
+              {reiniciando ? "Generando…" : "↻ Reiniciar el modo de prueba"}
+            </button>
+            <p className="ayuda">
+              Reiniciar borra lo que hayas registrado aquí y arma un patio nuevo. Es lo que conviene
+              hacer cuando salga una versión nueva de la app.
+            </p>
+            <p className="ayuda">
+              Pendientes de enviar: {pendientes}. En la Fase 0 ese número solo sube, porque todavía
+              no hay servidor a donde mandarlos.
+            </p>
+            <button type="button" className="btn btn-sec btn-ch" onClick={() => setHojaPrueba(false)}>Cerrar</button>
+          </div>
+        </div>
       )}
 
       {aviso && (

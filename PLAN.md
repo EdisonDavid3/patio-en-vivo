@@ -531,6 +531,30 @@ Falta un solo ajuste, que esta sesión no puede hacer porque la API de Pages est
 en *Settings → Pages*, poner el origen en **GitHub Actions** en vez de «Deploy from a branch».
 Con «branch» GitHub publica el código fuente tal cual y la página sale en blanco.
 
+## 12.ter Revisión del 23-nov
+
+**Ronda sin efecto túnel.** Ya no cambia toda la pantalla en cada lectura. Arriba va la lista de la
+sección: la que ya mediste con su valor, la tuya resaltada y las que siguen. Abajo, el teclado fijo.
+Al guardar **solo baja el resaltado** y la lista se mueve lo mínimo. Tocar cualquier fila salta a ese
+contenedor. Cabe en 360×640 con 4 filas a la vista. En PC el teclado no se estira: lista a la
+izquierda, teclado de 320 px a la derecha.
+
+**Llegada de una sola pasada.** Un campo de 11 caracteres con el formato a la vista
+(«MSCU 128160 8», lo que falta en guiones bajos) y **teclado propio en pantalla**: letras hasta la
+cuarta y después números, sin depender del teclado del teléfono, que no cambia de forma fiable.
+La temperatura es opcional y está plegada, igual que producto, sello, estado y nota.
+
+**Reporte oficial** con las dos decisiones: solo salen los contenedores que se miden —los vacíos se
+cuentan al pie—, el ESTADO lleva la letra del formato (V, C, E, D) y las lecturas de enfriando y
+cargando no se encierran en rojo, con su nota en Observaciones.
+
+**Modo tutorial lúdico.** Doce pasos que alumbran la parte que explican, con burbuja, emoji y puntos
+de avance. Arranca solo la primera vez y se repite cuando se quiera. Los pasos de ronda y llegada
+abren esas pantallas por su cuenta para que se vean trabajando.
+
+**Modo de prueba.** Botón 🧪 en la cabecera: dice que nada es real, repite el tutorial y **reinicia
+la demostración** generando un patio nuevo. Es lo que hay que tocar cuando salga una versión nueva.
+
 ## 13. Qué pasa cuando apruebes
 
 1. Creo `CLAUDE.md` con estas decisiones, para no perder el hilo entre sesiones.

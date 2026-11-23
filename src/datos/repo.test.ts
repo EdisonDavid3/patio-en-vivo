@@ -333,3 +333,55 @@ describe("datos de demostración coherentes", () => {
     expect(camara.filter((x) => !x.estadia).length).toBeGreaterThan(0);
   });
 });
+
+describe("reporte oficial con etapas (D34 y D35)", () => {
+  it("la hoja lleva solo los que se miden; los vacíos quedan fuera y se cuentan", async () => {
+    await sembrar(AHORA);
+    const rep = await armarReporte("2026-11-14");
+    const v = await vistaPatio(AHORA);
+    const vacios = v.lista.filter((x) => x.etapa === "vacio").length;
+    expect(vacios).toBeGreaterThan(0);
+    expect(rep.vaciosFuera).toBe(vacios);
+    for (const f of rep.filas) expect(f.etapa).not.toBe("vacio");
+  });
+
+  it("el ESTADO sale con la letra del formato y «enfriando» va como V", async () => {
+    await sembrar(AHORA);
+    const rep = await armarReporte("2026-11-14");
+    const porEtapa = new Map(rep.filas.map((f) => [f.etapa, f.estado]));
+    expect(porEtapa.get("cargando")).toBe("C");
+    expect(porEtapa.get("con_producto")).toBe("E");
+    if (porEtapa.has("enfriando")) expect(porEtapa.get("enfriando")).toBe("V");
+    expect([...porEtapa.values()].every((x) => ["V", "C", "E", "D"].includes(x))).toBe(true);
+  });
+
+  it("solo las filas con producto llevan las lecturas marcadas como fuera de rango", async () => {
+    await sembrar(AHORA);
+    const rep = await armarReporte("2026-11-14");
+    for (const f of rep.filas) expect(f.vigilada).toBe(f.etapa === "con_producto");
+    const enfriando = rep.filas.find((f) => f.etapa === "enfriando");
+    if (enfriando) expect(enfriando.vigilada).toBe(false);
+  });
+
+  it("un contenedor que se enfría se explica en Observaciones, no como incumplimiento", async () => {
+    await sembrar(AHORA);
+    const rep = await armarReporte("2026-11-14");
+    if (rep.filas.some((f) => f.etapa === "enfriando")) {
+      expect(rep.observaciones.some((o) => o.texto.includes("enfriamiento"))).toBe(true);
+    }
+    expect(rep.observaciones.some((o) => o.texto.includes("fuera de rango") && o.texto.includes("enfriamiento"))).toBe(false);
+  });
+
+  it("un contenedor despachado durante el día sigue saliendo en la hoja", async () => {
+    await sembrar(AHORA);
+    const v = await vistaPatio(AHORA);
+    const o = v.lista.find((x) => x.etapa === "con_producto")!;
+    const numero = o.estadia!.numero;
+    await reportarSalida(o.estadia!.id, AHORA);
+    const rep = await armarReporte("2026-11-14");
+    const fila = rep.filas.find((f) => f.numero === numero);
+    expect(fila).toBeDefined();
+    expect(fila!.estado).toBe("D");
+    expect(fila!.salida).toBe(AHORA);
+  });
+});
